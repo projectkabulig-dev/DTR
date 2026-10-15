@@ -370,7 +370,7 @@ function drawDtrSheet(wb,d,title){
     merge(`${C}50:${G}50`); put(`${C}50`,signName(d.teacher.name).toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}50:${G}50`);
     merge(`${A}51:${G}51`); put(`${A}51`,'Verified as to the prescribed office hours.',{size:7,italic:true});
     merge(`${C}54:${G}54`); put(`${C}54`,String(d.inCharge||'').toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}54:${G}54`);
-    merge(`${C}55:${G}55`); put(`${C}55`,'In Charge',{size:8,italic:true},CENTER);
+    merge(`${C}55:${G}55`); put(`${C}55`,String(d.inChargeTitle||'In Charge'),{size:8,italic:true},{horizontal:'center',vertical:'middle',shrinkToFit:true});
     put(`${A}57`,'(See Instructions on back)',{size:6,italic:true});
   };
   for(let k=0;k<COPIES;k++) drawCopy(k);
@@ -756,7 +756,7 @@ async function loadDtr(){
       <tr><th>Arrival</th><th>Departure</th><th>Arrival</th><th>Departure</th><th>Hours</th><th>Minutes</th></tr></thead>
       <tbody>${rows}</tbody>
       <tfoot><tr><td colspan="5">TOTAL</td><td>${Math.floor(calc.total/60)}</td><td>${calc.total%60}</td></tr></tfoot></table></div>
-    <p class="small muted" style="margin:10px 0 0">In Charge: ${r.inCharge?esc(r.inCharge):'<i>not set for this school yet</i>'}</p>
+    <p class="small muted" style="margin:10px 0 0">In Charge: ${r.inCharge?esc(r.inCharge)+(r.inChargeTitle?', '+esc(r.inChargeTitle):''):'<i>not set for this school yet</i>'}</p>
     ${done?'':`<p class="note" style="margin-top:10px">The month is not finished yet. You can download or print now, but the DTR is incomplete and the undertime may still change.</p>`}`;
   const dx=$('#dx'), dp=$('#dp');
   dx.disabled=dp.disabled=false;
@@ -803,7 +803,7 @@ function formHtml(d){
     <div class="cert">I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival at and departure from office.</div>
     <div class="sg"><i>${esc(signName(d.teacher.name).toUpperCase())}</i></div>
     <div class="vf">Verified as to the prescribed office hours.</div>
-    <div class="ic"><b>${esc(String(d.inCharge||'').toUpperCase())}</b></div><div class="icc">In Charge</div>
+    <div class="ic"><b>${esc(String(d.inCharge||'').toUpperCase())}</b></div><div class="icc"${(d.inChargeTitle||'').length>40?` style="font-size:${Math.max(4.8,7.5*40/d.inChargeTitle.length).toFixed(1)}pt"`:''}>${esc(d.inChargeTitle||'In Charge')}</div>
     <div class="see">(See Instructions on back)</div></div>`;
 }
 function printHtml(d){
@@ -871,18 +871,19 @@ async function viewSchools(){
   if(!r.ok){ v.innerHTML=`<div class="card"><p class="err">${esc(r.error)}</p></div>`; return; }
   state.schools=r.schools;
   const row=(s,i)=>`<div style="padding:14px 0;border-top:1px solid var(--line)">
-      <div class="bar"><div><label>School / Office</label><input type="text" value="${esc(s.school)}" readonly></div><div><label for="ic${i}">In Charge (school head)</label><input id="ic${i}" type="text" value="${esc(s.inCharge)}"></div></div>
+      <div class="bar"><div><label>School / Office</label><input type="text" value="${esc(s.school)}" readonly></div><div><label for="ic${i}">In Charge (name)</label><input id="ic${i}" type="text" value="${esc(s.inCharge)}"></div>
+      <div><label for="ti${i}">In Charge position</label><input id="ti${i}" type="text" maxlength="60" value="${esc(s.title||'')}" placeholder="e.g. Chief, Curriculum Implementation Division"></div></div>
       <div class="bar"><div><label for="la${i}">Latitude</label><input id="la${i}" type="text" inputmode="decimal" value="${esc(s.lat)}" placeholder="e.g. 12.5778"></div>
         <div><label for="lo${i}">Longitude</label><input id="lo${i}" type="text" inputmode="decimal" value="${esc(s.lng)}" placeholder="e.g. 122.2691"></div>
         <div><label for="ra${i}">Radius (meters)</label><input id="ra${i}" type="text" inputmode="numeric" value="${esc(s.radius)}" placeholder="150"></div>
         <div class="actions"><button class="btn ghost" data-g="${i}" type="button">Use my location</button><button class="btn" data-s="${i}" type="button">Save</button></div></div></div>`;
   v.innerHTML=`<div class="card"><h2 style="font-size:20px;margin-bottom:4px">Schools / Offices, In Charge and GPS area</h2>
-    <p class="muted small" style="margin:0 0 6px">The name under "In Charge" on the DTR is taken from here, based on the employee's school. Use the format SURNAME, First Name M.I.</p>
+    <p class="muted small" style="margin:0 0 6px">The name under the signature line ("Verified as to the prescribed office hours") and the position written below it come from here, based on the employee's school. If the position is left empty, "In Charge" is written. Use the name format SURNAME, First Name M.I.</p>
     <p class="muted small" style="margin:0 0 6px"><b>GPS area:</b> employees can time in or out from a phone only when they are inside this circle. Stand inside the school or office (ideally in the middle), press <b>Use my location</b>, then <b>Save</b>. Location only works on the website link, not inside the Apps Script page.</p>
     <p class="muted small" style="margin:0 0 6px"><b>Not there?</b> Open Google Maps, press and hold (phone) or right-click (computer) on the building, copy the two numbers shown (for example <i>12.5778, 122.2691</i>) and paste them into the <b>Latitude</b> box. They are split automatically. Then press <b>Save</b>.</p>
     <p class="muted small" style="margin:0 0 6px">Leave the fields empty to turn phone time in/out off for that place's employees (the kiosk still works).</p>
     ${r.schools.map(row).join('')||'<p class="muted">No schools yet. Add an employee with a school first, or add one below.</p>'}
-    <div style="padding-top:14px;border-top:1px solid var(--line)"><div class="bar"><div><label for="ns">New school / office</label><input id="ns" type="text"></div><div><label for="nh">In Charge</label><input id="nh" type="text"></div><div class="actions"><button class="btn ghost" id="addS" type="button">Add</button></div></div></div></div>`;
+    <div style="padding-top:14px;border-top:1px solid var(--line)"><div class="bar"><div><label for="ns">New school / office</label><input id="ns" type="text"></div><div><label for="nh">In Charge (name)</label><input id="nh" type="text"></div><div><label for="nt">In Charge position</label><input id="nt" type="text" maxlength="60"></div><div class="actions"><button class="btn ghost" id="addS" type="button">Add</button></div></div></div></div>`;
   r.schools.forEach((_,i)=>{
     const la=$('#la'+i); if(!la) return;
     const split=()=>{ const m=/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(la.value); if(m){ la.value=m[1]; $('#lo'+i).value=m[2]; if(!$('#ra'+i).value) $('#ra'+i).value='150'; } };
@@ -895,11 +896,11 @@ async function viewSchools(){
     b.disabled=false; b.textContent='Use my location';
   });
   document.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{
-    const i=+b.dataset.s, res=await api('saveSchool',{school:state.schools[i].school,inCharge:$('#ic'+i).value,lat:$('#la'+i).value,lng:$('#lo'+i).value,radius:$('#ra'+i).value});
+    const i=+b.dataset.s, res=await api('saveSchool',{school:state.schools[i].school,inCharge:$('#ic'+i).value,title:$('#ti'+i).value,lat:$('#la'+i).value,lng:$('#lo'+i).value,radius:$('#ra'+i).value});
     toast(res.ok?'Saved.':res.error,res.ok?'good':'bad');
   });
   $('#addS').onclick=async()=>{
-    const res=await api('saveSchool',{school:$('#ns').value,inCharge:$('#nh').value});
+    const res=await api('saveSchool',{school:$('#ns').value,inCharge:$('#nh').value,title:$('#nt').value});
     if(res.ok){ toast('Saved.','good'); viewSchools(); } else toast(res.error,'bad');
   };
 }
