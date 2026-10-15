@@ -308,7 +308,7 @@ function drawDtrSheet(wb,d,title){
         });
       } else if(x.label){
         merge(`${B}${r}:${E}${r}`);
-        const cell=ws.getCell(B+r); cell.value=x.label; cell.font={name:FONT,size:x.remarks?8:9,italic:!!x.remarks}; cell.alignment=CENTER;
+        const cell=ws.getCell(B+r); cell.value=x.label; cell.font={name:FONT,size:x.remarks?8:9,italic:!!x.remarks}; cell.alignment={horizontal:'center',vertical:'middle',shrinkToFit:true};
         eachCell(`${B}${r}:${E}${r}`,q=>{ q.border=BOX; });
       }
       const day='$'+A+r, mon='$'+C+'$7', rg=(p,q)=>`$${p}${r}:$${q}${r}`;
@@ -702,7 +702,7 @@ async function loadDtr(){
   const calc=computeDtr(r), done=monthDone(y,m);
   const rows=calc.rows.map(x=>{
     const cells=x.label
-      ? `<td colspan="4"${x.remarks?' class="rem"':''}>${esc(x.label)}</td>`
+      ? `<td colspan="4"${x.remarks?' class="rem"':''}${x.label.length>44?` style="font-size:${Math.max(4.8,7.5*44/x.label.length).toFixed(1)}pt"`:''}>${esc(x.label)}</td>`
       : [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
     return `<tr><td>${x.day}</td>${cells}<td>${x.ut==null?'':Math.floor(x.ut/60)}</td><td>${x.ut==null?'':x.ut%60}</td></tr>`;
   }).join('');
@@ -742,7 +742,7 @@ function formHtml(d){
   const c=computeDtr(d);
   const rows=c.rows.map(x=>{
     const cells=x.label
-      ? `<td colspan="4"${x.remarks?' class="rem"':''}>${esc(x.label)}</td>`
+      ? `<td colspan="4"${x.remarks?' class="rem"':''}${x.label.length>44?` style="font-size:${Math.max(4.8,7.5*44/x.label.length).toFixed(1)}pt"`:''}>${esc(x.label)}</td>`
       : [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
     return `<tr><td>${x.day}</td>${cells}<td>${x.ut==null?'':Math.floor(x.ut/60)}</td><td>${x.ut==null?'':x.ut%60}</td></tr>`;
   }).join('');
@@ -873,13 +873,14 @@ async function viewLeave(){
     <p class="muted small" style="margin:0 0 12px">Use this when you will not time in at school (for example sick leave or an official trip). Your DTR will show the label instead of times. Weekends are skipped, and days that already have times are not changed.</p>
     <p class="err hidden" id="lverr" role="alert"></p>
     <div class="row"><div class="field"><label for="lvType">Type</label><select id="lvType">${STATUS_TYPES_UI.map(t=>`<option>${t}</option>`).join('')}</select></div>
-      <div class="field"><label for="lvNote">Note (optional: place or purpose, no number needed)</label><input id="lvNote" type="text" maxlength="24" placeholder="e.g. Training, Odiongan"></div></div>
+      <div class="field"><label for="lvNote">Note (optional: place or purpose, no number needed)</label><input id="lvNote" type="text" maxlength="40" placeholder="e.g. Training on Sipnayan at Odiongan"><small class="muted" id="lvCount">0 / 40</small></div></div>
     <div class="row"><div class="field"><label for="lvFrom">From</label><input id="lvFrom" type="date" min="${mn}" max="${mx}" value="${today}"></div>
       <div class="field"><label for="lvTo">To (optional)</label><input id="lvTo" type="date" min="${mn}" max="${mx}"></div></div>
     <p class="muted small" style="margin:0 0 10px">You can file from ${esc(mn)} up to ${esc(mx)}. For other dates, ask the admin.</p>
     <button class="btn" id="lvSave" type="button">File it</button></div>
     <div class="card"><h2 style="font-size:18px;margin-bottom:8px">My entries</h2>
     ${r.entries.length?`<div class="tw"><table class="t"><thead><tr><th>Date</th><th>Status</th><th></th></tr></thead><tbody>${r.entries.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(e.label)}</td><td>${e.editable?`<button class="btn ghost" data-c="${esc(e.date)}" type="button">Cancel</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Nothing filed yet.</p>'}</div>`;
+  $('#lvNote').addEventListener('input',()=>{ $('#lvCount').textContent=$('#lvNote').value.length+' / 40'; });
   $('#lvSave').onclick=async()=>{
     const b=$('#lvSave'), e=$('#lverr'); e.classList.add('hidden'); b.disabled=true;
     const res=await api('setStatus',{type:$('#lvType').value,note:$('#lvNote').value,from:$('#lvFrom').value,to:$('#lvTo').value||$('#lvFrom').value});
