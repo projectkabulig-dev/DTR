@@ -236,7 +236,40 @@ function computeDtr(d){
     if(!hasTime&&!nonexistent) label=x.remarks||(wd===6?'SATURDAY':wd===0?'SUNDAY':'');
     return Object.assign({},x,{off,nonexistent,hasTime,ut,label});
   });
+  // consecutive days with the same written reason share one tall cell (a training that lasts several days)
+  const group=x=>!!(x.remarks&&x.label===x.remarks&&!x.hasTime&&!x.nonexistent);
+  rows.forEach(x=>{ x.span=1; x.skip=false; });
+  for(let i=0;i<rows.length;){
+    if(!group(rows[i])){ i++; continue; }
+    let j=i+1;
+    while(j<rows.length&&group(rows[j])&&rows[j].label===rows[i].label) j++;
+    rows[i].span=j-i;
+    for(let k=i+1;k<j;k++) rows[k].skip=true;
+    i=j;
+  }
   return {rows,total};
+}
+
+// Name for the signature line: first name first.
+// "CANDIDO, ROGELIO JR. B." -> "ROGELIO B. CANDIDO JR."   "DELA CRUZ, JUAN D." -> "JUAN D. DELA CRUZ"
+// A name without a comma is left as typed.
+function signName(full){
+  const raw=String(full||'').trim();
+  if(!raw.includes(',')) return raw;
+  const i=raw.indexOf(','), surname=raw.slice(0,i).trim();
+  const t=raw.slice(i+1).replace(/,/g,' ').split(/\s+/).filter(Boolean);
+  const isSuffix=w=>/^(JR|SR|II|III|IV|V)\.?$/i.test(w);
+  const suffix=t.filter(isSuffix), given=t.filter(w=>!isSuffix(w));
+  return [given.join(' '),surname,suffix.join(' ')].filter(Boolean).join(' ');
+}
+
+// Font size (and wrapping) so that a label fits a merged AM/PM block of `rows` rows.
+function fitLabel(len,rows,widthPt,rowPt,maxSize,minSize){
+  for(let s=maxSize;s>=minSize;s-=0.5){
+    const perLine=widthPt/(0.52*s), lines=rows>1?Math.max(1,Math.floor((rowPt*rows-1)/(1.25*s))):1;
+    if(len<=perLine*lines*0.95) return {size:s,wrap:rows>1};
+  }
+  return {size:minSize,wrap:rows>1};
 }
 
 function buildDtrWorkbook(ExcelJS, d){
@@ -300,16 +333,18 @@ function drawDtrSheet(wb,d,title){
 
     calc.rows.forEach((x,i)=>{
       const r=FIRST+i;
-      [A,B,C,D,E,F,G].forEach(col=>{ const cell=ws.getCell(col+r); cell.font={name:FONT,size:9}; cell.border=BOX; cell.alignment=CENTER; });
+      (x.skip?[A,F,G]:[A,B,C,D,E,F,G]).forEach(col=>{ const cell=ws.getCell(col+r); cell.font={name:FONT,size:9}; cell.border=BOX; cell.alignment=CENTER; });
       ws.getCell(A+r).value=x.day;
       if(x.hasTime){
         [x.amIn,x.amOut,x.pmIn,x.pmOut].forEach((t,q)=>{
           if(t){ const cell=ws.getCell(c(1+q)+r); cell.value=secOf(t)/86400; cell.numFmt='h:mm AM/PM'; }
         });
-      } else if(x.label){
-        merge(`${B}${r}:${E}${r}`);
-        const cell=ws.getCell(B+r); cell.value=x.label; cell.font={name:FONT,size:x.remarks?8:9,italic:!!x.remarks}; cell.alignment={horizontal:'center',vertical:'middle',shrinkToFit:true};
-        eachCell(`${B}${r}:${E}${r}`,q=>{ q.border=BOX; });
+      } else if(x.label&&!x.skip){
+        const n=x.span||1, last=r+n-1, fit=x.remarks?fitLabel(x.label.length,n,183,15,9,5.5):{size:9,wrap:false};
+        merge(`${B}${r}:${E}${last}`);
+        const cell=ws.getCell(B+r); cell.value=x.label; cell.font={name:FONT,size:fit.size,italic:!!x.remarks};
+        cell.alignment=fit.wrap?{horizontal:'center',vertical:'middle',wrapText:true}:{horizontal:'center',vertical:'middle',shrinkToFit:true};
+        eachCell(`${B}${r}:${E}${last}`,q=>{ q.border=BOX; });
       }
       const day='$'+A+r, mon='$'+C+'$7', rg=(p,q)=>`$${p}${r}:$${q}${r}`;
       const ic=ws.getCell(HP+r);
@@ -332,7 +367,7 @@ function drawDtrSheet(wb,d,title){
     merge(`${A}45:${G}47`);
     put(`${A}45`,'I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival at and departure from office.',
       {size:7,italic:true},{horizontal:'left',vertical:'top',wrapText:true});
-    merge(`${C}50:${G}50`); put(`${C}50`,String(d.teacher.name||'').toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}50:${G}50`);
+    merge(`${C}50:${G}50`); put(`${C}50`,signName(d.teacher.name).toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}50:${G}50`);
     merge(`${A}51:${G}51`); put(`${A}51`,'Verified as to the prescribed office hours.',{size:7,italic:true});
     merge(`${C}54:${G}54`); put(`${C}54`,String(d.inCharge||'').toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}54:${G}54`);
     merge(`${C}55:${G}55`); put(`${C}55`,'In Charge',{size:8,italic:true},CENTER);
@@ -662,6 +697,17 @@ function monthOptions(){
   return out;
 }
 // The month counts as finished once its last working day (Monday to Friday) is reached. Used for the warning only.
+function midCellsHtml(x,print){
+  if(x.skip) return '';
+  if(!x.label) return [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
+  const rs=x.span>1?` rowspan="${x.span}"`:'';
+  let st='';
+  if(print&&x.remarks){
+    const f=fitLabel(x.label.length,x.span||1,192.8,14.7,7.5,4.8);
+    if(f.size<7.5||f.wrap) st=` style="font-size:${f.size}pt${f.wrap?';white-space:normal;line-height:1.15':''}"`;
+  }
+  return `<td colspan="4"${rs}${x.remarks?' class="rem"':''}${st}>${esc(x.label)}</td>`;
+}
 function monthDone(y,m){
   let d=dim(y,m);
   while(d>1&&(dow(y,m,d)===0||dow(y,m,d)===6)) d--;
@@ -701,9 +747,7 @@ async function loadDtr(){
   state.dtr=r;
   const calc=computeDtr(r), done=monthDone(y,m);
   const rows=calc.rows.map(x=>{
-    const cells=x.label
-      ? `<td colspan="4"${x.remarks?' class="rem"':''}${x.label.length>44?` style="font-size:${Math.max(4.8,7.5*44/x.label.length).toFixed(1)}pt"`:''}>${esc(x.label)}</td>`
-      : [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
+    const cells=midCellsHtml(x,false);
     return `<tr><td>${x.day}</td>${cells}<td>${x.ut==null?'':Math.floor(x.ut/60)}</td><td>${x.ut==null?'':x.ut%60}</td></tr>`;
   }).join('');
   $('#dbody').innerHTML=`
@@ -741,9 +785,7 @@ async function downloadExcel(){
 function formHtml(d){
   const c=computeDtr(d);
   const rows=c.rows.map(x=>{
-    const cells=x.label
-      ? `<td colspan="4"${x.remarks?' class="rem"':''}${x.label.length>44?` style="font-size:${Math.max(4.8,7.5*44/x.label.length).toFixed(1)}pt"`:''}>${esc(x.label)}</td>`
-      : [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
+    const cells=midCellsHtml(x,true);
     return `<tr><td>${x.day}</td>${cells}<td>${x.ut==null?'':Math.floor(x.ut/60)}</td><td>${x.ut==null?'':x.ut%60}</td></tr>`;
   }).join('');
   return `<div class="pf">
@@ -759,7 +801,7 @@ function formHtml(d){
       <tbody>${rows}</tbody>
       <tfoot><tr><td colspan="5">TOTAL</td><td>${Math.floor(c.total/60)}</td><td>${c.total%60}</td></tr></tfoot></table>
     <div class="cert">I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival at and departure from office.</div>
-    <div class="sg"><i>${esc(String(d.teacher.name).toUpperCase())}</i></div>
+    <div class="sg"><i>${esc(signName(d.teacher.name).toUpperCase())}</i></div>
     <div class="vf">Verified as to the prescribed office hours.</div>
     <div class="ic"><b>${esc(String(d.inCharge||'').toUpperCase())}</b></div><div class="icc">In Charge</div>
     <div class="see">(See Instructions on back)</div></div>`;
@@ -863,6 +905,7 @@ async function viewSchools(){
 }
 
 /* ---------- LEAVE / TRAVEL (filed by the employee) ---------- */
+const typeName=t=>t?t.charAt(0)+t.slice(1).toLowerCase():'';
 async function viewLeave(){
   const v=$('#view'); v.innerHTML='<div class="card"><p class="muted">Loading...</p></div>';
   const r=await api('myStatus');
@@ -870,24 +913,24 @@ async function viewLeave(){
   if(!r.ok){ v.innerHTML=`<div class="card"><p class="err">${esc(r.error)}</p></div>`; return; }
   const today=manilaDate(), mn=r.min, mx=r.max;
   v.innerHTML=`<div class="card"><h2 style="font-size:20px;margin-bottom:4px">Leave / Travel</h2>
-    <p class="muted small" style="margin:0 0 12px">Use this when you will not time in at school (for example sick leave or an official trip). Your DTR will show the label instead of times. Weekends are skipped, and days that already have times are not changed.</p>
+    <p class="muted small" style="margin:0 0 12px">Use this when you will not time in at school (for example sick leave or an official trip). Your DTR will show <b>only the reason</b> you type below, instead of times. If you leave the reason blank, it shows a standard text such as "On sick leave". Weekends are skipped, and days that already have times are not changed.</p>
     <p class="err hidden" id="lverr" role="alert"></p>
-    <div class="row"><div class="field"><label for="lvType">Type</label><select id="lvType">${STATUS_TYPES_UI.map(t=>`<option>${t}</option>`).join('')}</select></div>
-      <div class="field"><label for="lvNote">Note (optional: place or purpose, no number needed)</label><input id="lvNote" type="text" maxlength="40" placeholder="e.g. Training on Sipnayan at Odiongan"><small class="muted" id="lvCount">0 / 40</small></div></div>
+    <div class="field"><label for="lvType">Type</label><select id="lvType">${STATUS_TYPES_UI.map(t=>`<option value="${t}">${typeName(t)}</option>`).join('')}</select></div>
+    <div class="field"><label for="lvNote">Reason shown on the DTR (optional)</label><input id="lvNote" type="text" maxlength="70" placeholder="e.g. Attending training on Sipnayan at Baguio Teachers Camp"><small class="muted" id="lvCount">0 / 70</small></div>
     <div class="row"><div class="field"><label for="lvFrom">From</label><input id="lvFrom" type="date" min="${mn}" max="${mx}" value="${today}"></div>
       <div class="field"><label for="lvTo">To (optional)</label><input id="lvTo" type="date" min="${mn}" max="${mx}"></div></div>
     <p class="muted small" style="margin:0 0 10px">You can file from ${esc(mn)} up to ${esc(mx)}. For other dates, ask the admin.</p>
     <button class="btn" id="lvSave" type="button">File it</button></div>
     <div class="card"><h2 style="font-size:18px;margin-bottom:8px">My entries</h2>
-    ${r.entries.length?`<div class="tw"><table class="t"><thead><tr><th>Date</th><th>Status</th><th></th></tr></thead><tbody>${r.entries.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(e.label)}</td><td>${e.editable?`<button class="btn ghost" data-c="${esc(e.date)}" type="button">Cancel</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Nothing filed yet.</p>'}</div>`;
-  $('#lvNote').addEventListener('input',()=>{ $('#lvCount').textContent=$('#lvNote').value.length+' / 40'; });
+    ${r.entries.length?`<div class="tw"><table class="t"><thead><tr><th>Date</th><th>Type</th><th>Shown on the DTR</th><th></th></tr></thead><tbody>${r.entries.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(typeName(e.type))}</td><td style="white-space:normal">${esc(e.label)}</td><td>${e.editable?`<button class="btn ghost" data-c="${esc(e.date)}" type="button">Cancel</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Nothing filed yet.</p>'}</div>`;
+  $('#lvNote').addEventListener('input',()=>{ $('#lvCount').textContent=$('#lvNote').value.length+' / 70'; });
   $('#lvSave').onclick=async()=>{
     const b=$('#lvSave'), e=$('#lverr'); e.classList.add('hidden'); b.disabled=true;
-    const res=await api('setStatus',{type:$('#lvType').value,note:$('#lvNote').value,from:$('#lvFrom').value,to:$('#lvTo').value||$('#lvFrom').value});
+    const res=await api('setStatus',{type:$('#lvType').value,reason:$('#lvNote').value,from:$('#lvFrom').value,to:$('#lvTo').value||$('#lvFrom').value});
     b.disabled=false;
     if(!res.ok){ e.textContent=res.error; e.classList.remove('hidden'); return; }
     const sk=(res.skipped||[]).map(x=>`${x.date} (${x.reason})`).join(', ');
-    toast(res.set.length?`Filed ${res.label} for ${res.set.length} day(s).${sk?' Skipped: '+sk:''}`:`Nothing was filed. ${sk||'Only weekends were selected.'}`,res.set.length?'good':'bad');
+    toast(res.set.length?`Filed "${res.label}" for ${res.set.length} day(s).${sk?' Skipped: '+sk:''}`:`Nothing was filed. ${sk||'Only weekends were selected.'}`,res.set.length?'good':'bad');
     viewLeave();
   };
   document.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{
@@ -914,7 +957,7 @@ async function viewFix(){
     if(!r.ok){ toast(r.error,'bad'); return; }
     const x=r.rec, t=k=>esc(x[k]?x[k].slice(0,8):'');
     $('#fbody').innerHTML=`<div class="row">${SLOT_KEYS.map(k=>`<div class="field"><label for="f_${k}">${SLOT_INFO[k].sub}</label><input id="f_${k}" type="time" step="1" value="${t(k)}"></div>`).join('')}</div>
-      <div class="field"><label for="f_rem">Remarks (e.g. LEAVE, HOLIDAY, TRAVEL ORDER)</label><input id="f_rem" type="text" maxlength="60" value="${esc(x.remarks)}"></div>
+      <div class="field"><label for="f_rem">Remarks (e.g. LEAVE, HOLIDAY, TRAVEL ORDER)</label><input id="f_rem" type="text" maxlength="70" value="${esc(x.remarks)}"></div>
       <button class="btn" id="fs">Save changes</button>`;
     $('#fs').onclick=async()=>{
       const res=await api('editDay',{empNo:state.fix.emp,date:state.fix.date,amIn:$('#f_AM_IN').value,amOut:$('#f_AM_OUT').value,pmIn:$('#f_PM_IN').value,pmOut:$('#f_PM_OUT').value,remarks:$('#f_rem').value});
