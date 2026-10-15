@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>E-DTR | Attendance and Daily Time Record</title>
+<meta name="theme-color" content="#F3F5FB">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --ink:#0F172A; --mute:#64748B; --brand:#2563EB; --brand-d:#1D4ED8; --brand-2:#6D5EF6; --brand-soft:#EEF3FF;
+  --bg:#F3F5FB; --paper:#FFFFFF; --line:#E2E8F0; --out:#F97316; --out-d:#EA580C; --out-soft:#FFF3E6;
+  --ok:#16A34A; --ok-soft:#E8F8EE; --err:#DC2626; --err-bg:#FEECEC; --r:16px;
+  --shadow:0 1px 2px rgba(15,23,42,.05),0 10px 30px rgba(15,23,42,.07);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font:16px/1.5 'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--ink);
+  background:radial-gradient(900px 360px at 50% -120px,#DDE5FF 0%,rgba(221,229,255,0) 70%),var(--bg);min-height:100vh}
+h1,h2,h3,.display{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-weight:800;letter-spacing:-.02em;margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid #93B4FF;outline-offset:2px}
+.hidden{display:none!important}
+
+/* top bar */
+.top{background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);
+  color:var(--ink);padding:10px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.top .brand{font-weight:800;font-size:20px;letter-spacing:-.03em;display:flex;align-items:center;gap:9px;white-space:nowrap;flex:none}
+.top .brand:before{content:"";width:26px;height:26px;border-radius:9px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 4px 12px rgba(37,99,235,.35)}
+.top .who{margin-left:auto;text-align:right;line-height:1.25;min-width:0}
+.top .who b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
+.top .who span{font-size:12.5px;color:var(--mute);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
+.top .iconbtn{background:var(--paper);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:7px 12px;cursor:pointer;font-size:14px;font-weight:600}
+.top .iconbtn:hover{background:var(--brand-soft);border-color:#C7D6FF}
+
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;position:sticky;top:0;z-index:5;background:rgba(243,245,251,.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.tabs button{background:transparent;border:0;border-radius:999px;padding:8px 16px;white-space:nowrap;cursor:pointer;color:var(--mute);font-weight:700;font-size:15px}
+.tabs button:hover{background:#E8EDF9;color:var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.tabs .sep{width:1px;background:var(--line);margin:8px 4px}
+
+main{max-width:980px;margin:0 auto;padding:12px 16px 40px}
+.card{background:var(--paper);border:1px solid rgba(226,232,240,.9);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}
+.card+.card{margin-top:14px}
+.muted{color:var(--mute)}
+.small{font-size:14px}
+
+/* buttons / forms */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border-radius:12px;padding:10px 18px;font-weight:700;cursor:pointer;min-height:44px;box-shadow:0 6px 16px rgba(37,99,235,.25)}
+.btn:hover{filter:brightness(1.06)}
+.btn.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn.ghost:hover{background:var(--brand-soft);border-color:#C7D6FF;filter:none}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+label{display:block;font-weight:700;font-size:13.5px;margin:0 0 5px;color:#334155}
+.field{margin-bottom:12px}
+input[type=text],input[type=password],input[type=date],input[type=time],input[type=number],select{width:100%;min-height:46px;border:1px solid #CBD5E1;border-radius:12px;padding:8px 12px;background:#fff}
+input:focus,select:focus{border-color:var(--brand);outline:3px solid rgba(37,99,235,.18);outline-offset:0}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>*{flex:1 1 180px}
+.err{background:var(--err-bg);color:var(--err);border-radius:12px;padding:10px 14px;margin:0 0 12px;font-size:15px;font-weight:600}
+.note{background:var(--out-soft);border-radius:12px;padding:12px 14px;font-size:15px}
+
+/* login */
+.login{max-width:420px;margin:36px auto}
+.login h1{font-size:32px;margin-bottom:4px}
+
+/* clock + punch */
+.hero{text-align:center;padding:14px 0 6px}
+.clock{font-weight:800;font-size:clamp(44px,12vw,72px);line-height:1.02;letter-spacing:-.04em;font-variant-numeric:tabular-nums;color:#0F172A}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .clock{background:linear-gradient(180deg,#0F172A 30%,#475569);-webkit-background-clip:text;background-clip:text;color:transparent}
+}
+.date{color:var(--mute);margin-top:4px;font-weight:600}
+.tznote{font-size:13px;color:var(--mute)}
+.ring{position:relative;width:min(80vw,300px);aspect-ratio:1;margin:20px auto 12px}
+.ring svg{position:absolute;inset:0;width:100%;height:100%}
+.ring .punch{position:absolute;inset:15%;border-radius:50%;border:0;cursor:pointer;color:#fff;background:linear-gradient(145deg,var(--brand),var(--brand-2));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:0 14px 34px rgba(79,70,229,.40)}
+.ring .punch:hover{filter:brightness(1.07)}
+.ring .punch:active{transform:scale(.98)}
+.ring .punch.out{background:linear-gradient(145deg,#FB923C,var(--out-d));box-shadow:0 14px 34px rgba(234,88,12,.38)}
+.ring .punch:disabled{background:#CBD5E1;box-shadow:none;cursor:not-allowed}
+.punch b{font-weight:800;font-size:clamp(26px,8vw,34px);line-height:1.1;letter-spacing:-.02em}
+.punch span{font-size:14px;opacity:.95;padding:0 12px;line-height:1.25;font-weight:600}
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:440px;margin:10px auto 0;text-align:left}
+.slot{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+.slot small{display:block;color:var(--mute);font-size:13px;font-weight:600}
+.slot strong{font-size:19px;font-variant-numeric:tabular-nums}
+.slot.in.done{border-color:#B9CCFF;background:var(--brand-soft)}
+.slot.out.done{border-color:#FFD0A6;background:var(--out-soft)}
+.slot.next{outline:2px dashed #94A3B8;outline-offset:2px}
+
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:#fff}
+table.t{border-collapse:collapse;width:100%;font-size:15px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;white-space:nowrap}
+table.t th{background:#F8FAFC;font-weight:700;color:#475569}
+table.t tr:last-child td{border-bottom:0}
+table.dtr td,table.dtr th{text-align:center;padding:7px 8px;border:1px solid var(--line)}
+table.dtr td.rem{font-style:italic}
+table.dtr tfoot td{font-weight:800;background:#F8FAFC}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+.bar>div{flex:1 1 170px}
+.bar .actions{display:flex;gap:8px;flex:0 0 auto}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:700;background:var(--ok-soft);color:#15803D}
+.pill.off{background:#EEF2F7;color:var(--mute)}
+
+/* modal sheet */
+.scrim{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:#fff;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:22px;max-height:92vh;overflow:auto;box-shadow:0 -10px 40px rgba(15,23,42,.18)}
+@media(min-width:600px){.scrim{align-items:center}.sheet{border-radius:22px}}
+.sheet h2{font-size:22px;margin-bottom:10px}
+.sheet .acts{display:flex;gap:10px;margin-top:16px}
+.sheet .acts>*{flex:1}
+
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:14px;z-index:30;max-width:92vw;text-align:center;font-weight:600;box-shadow:0 10px 30px rgba(15,23,42,.3)}
+#toast.bad{background:var(--err)}
+#toast.good{background:var(--ok)}
+
+/* kiosk */
+.kiosk{max-width:600px;margin:0 auto;text-align:center}
+.kiosk .field{text-align:left}
+.kiosk{padding-bottom:20px}
+#kf input{font-size:22px;min-height:56px}
+.kbtn{width:100%;font-size:24px;min-height:64px;margin-top:4px}
+.kres{margin:16px 0;padding:16px;border-radius:16px;border:2px solid var(--line)}
+.kres.ok{background:var(--ok-soft);border-color:#86D7A5}
+.kres.warn{background:var(--out-soft);border-color:#FFC999;color:#9A3412}
+.kres .mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px;font-size:12.5px;color:var(--mute)}
+.kres .mini div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 4px}
+.kres .mini b{display:block;color:var(--ink);font-size:14.5px;font-variant-numeric:tabular-nums}
+.duo{display:flex;gap:clamp(18px,5vw,44px);justify-content:center;flex-wrap:wrap;margin:26px 0 12px}
+.orb{position:relative;width:min(42vw,230px);min-width:150px;aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.orb b{font-weight:800;font-size:clamp(24px,5vw,34px);letter-spacing:-.02em;line-height:1.1}
+.orb span{font-size:14px;font-weight:600;opacity:.95}
+.orb.in{background:linear-gradient(145deg,var(--brand),var(--brand-2));box-shadow:0 0 0 10px rgba(37,99,235,.10),0 14px 34px rgba(79,70,229,.40)}
+.orb.out{background:linear-gradient(145deg,#FB923C,var(--out-d));box-shadow:0 0 0 10px rgba(249,115,22,.12),0 14px 34px rgba(234,88,12,.38)}
+.chip{margin:14px auto 0;max-width:460px;padding:10px 14px;border-radius:12px;background:#EEF2F7;font-size:14.5px;text-align:center}
+.chip.ok{background:var(--ok-soft);color:#166534}
+.chip.warn{background:var(--out-soft);color:#9A3412}
+.chip a{font-weight:700;color:inherit;text-decoration:underline;cursor:pointer;margin-left:6px}
+.duo.phone{margin:18px 0 10px}
+.duo.phone .orb{width:min(40vw,170px);min-width:130px}
+.duo.phone .orb b{font-size:clamp(22px,5vw,28px)}
+.orb:disabled{opacity:.55;cursor:not-allowed;filter:grayscale(.3)}
+.orb:hover{filter:brightness(1.06)}
+.orb:active{transform:scale(.98)}
+.kres.bad{background:var(--err-bg);border-color:var(--err);color:var(--err)}
+.kres .g{font-weight:800;font-size:clamp(24px,6vw,34px);line-height:1.15;letter-spacing:-.02em}
+.kres .d{margin-top:6px;font-size:18px}
+/* print form (CSC Form 48): half of A4 (lengthwise), two copies on one A4 portrait page */
+#printSheet{display:none}
+.pw{display:flex;width:198mm;height:285mm;margin:0 auto;overflow:hidden}
+.pw .cut{flex:none;border-left:.3mm dashed #666;margin:0 2.8mm}
+.pf{width:96mm;flex:none;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:7.5pt}
+.pf .fn{font-size:6.5pt;font-weight:700;height:4mm;line-height:4mm}
+.pf h1{font:700 12pt Arial,Helvetica,sans-serif;text-align:center;letter-spacing:0;height:8mm;line-height:8mm;margin:0}
+.pf .nm{border-bottom:.3mm solid #000;text-align:center;font-weight:700;font-size:10pt;height:6mm;line-height:6mm;white-space:nowrap;overflow:hidden}
+.pf .cap{text-align:center;font-style:italic;font-size:6.5pt;height:3.5mm;line-height:3.5mm}
+.pf .ln{display:flex;height:4.5mm;line-height:4.5mm;font-size:7.5pt;white-space:nowrap}
+.pf .ln.m{height:5mm;line-height:5mm}
+.pf .ln i{flex:1;border-bottom:.3mm solid #000;font-style:normal;text-align:center;margin-left:1.5mm}
+.pf table{border-collapse:collapse;width:96mm;margin-top:2mm;table-layout:fixed}
+.pf th,.pf td{border:.3mm solid #000;text-align:center;padding:0;height:5.2mm;font-size:7.5pt;line-height:1;white-space:nowrap;overflow:hidden}
+.pf thead th{font-weight:700;height:5mm;font-size:7pt}
+.pf tfoot td{font-weight:700;height:5.5mm}
+.pf td.rem{font-style:italic}
+.pf .cert{font-size:6.5pt;font-style:italic;height:11mm;margin-top:2mm;line-height:1.25;overflow:hidden}
+.pf .sg{height:14mm;display:flex;align-items:flex-end}
+.pf .sg i{margin-left:30%;flex:1;border-bottom:.3mm solid #000;text-align:center;font-style:normal;font-weight:700;font-size:9pt;white-space:nowrap;overflow:hidden}
+.pf .vf{font-size:6.5pt;font-style:italic;height:4mm;line-height:4mm}
+.pf .ic{height:14mm;display:flex;align-items:flex-end}
+.pf .ic b{margin-left:30%;flex:1;border-bottom:.3mm solid #000;text-align:center;font-size:9pt;white-space:nowrap;overflow:hidden}
+.pf .icc{margin-left:30%;text-align:center;font-style:italic;font-size:7.5pt;height:4.5mm;line-height:4.5mm}
+.pf .see{font-size:6pt;font-style:italic;height:5mm;margin-top:3mm}
+@media print{
+  @page{size:A4 portrait;margin:6mm}
+  body>*:not(#printSheet){display:none!important}
+  #printSheet{display:block}
+  html,body{background:#fff}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
+<div id="printSheet" aria-hidden="true"></div>
+
+<script>
+/* ============================================================
+   SETTINGS: put the Web app URL from Apps Script here
+   ============================================================ */
+// When this page is opened directly from the Apps Script web app, API_URL is NOT needed.
+// It is only needed if index.html is hosted somewhere else (e.g. GitHub Pages).
+const API_URL = 'https://script.google.com/macros/s/AKfycbzF_IepT9sbU7N43fZBEJySbvxVh6wCF6s3NS2wkVdEMFcZIXpy92MLTsYpes77ZVZN/exec';
+const EXCEL_LIBS = [
+  'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'
+];
+
+// <<DTR_BUILDER  (no DOM here; used for the Excel file, print and table)
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const SLOT_INFO = {
+  AM_IN:  { kind:'in',  label:'Time In',  sub:'AM Arrival' },
+  AM_OUT: { kind:'out', label:'Time Out', sub:'AM Departure' },
+  PM_IN:  { kind:'in',  label:'Time In',  sub:'PM Arrival' },
+  PM_OUT: { kind:'out', label:'Time Out', sub:'PM Departure' }
+};
+const SLOT_KEYS = ['AM_IN','AM_OUT','PM_IN','PM_OUT'];
+const REQUIRED_MIN = 480; // 8 hours per day; there is no fixed work schedule
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function secOf(t){ if(!t) return null; const p=String(t).split(':').map(Number); return p[0]*3600+(p[1]||0)*60+(p[2]||0); }
+function fmt12(t){ if(!t) return ''; const p=String(t).split(':').map(Number); const ap=p[0]>=12?'PM':'AM'; return (p[0]%12||12)+':'+pad2(p[1])+' '+ap; }
+function dim(y,m){ return new Date(Date.UTC(y,m,0)).getUTCDate(); }
+function dow(y,m,d){ return new Date(Date.UTC(y,m-1,d)).getUTCDay(); }
+
+function computeDtr(d){
+  const y=d.year, m=d.month, n=dim(y,m); let total=0;
+  const rows=d.days.slice(0,31).map(x=>{
+    const hasTime=!!(x.amIn||x.amOut||x.pmIn||x.pmOut);
+    const nonexistent=x.day>n;
+    const wd=dow(y,m,x.day), off=nonexistent||wd===0||wd===6;
+    let ut=null;
+    if(!off&&hasTime){
+      let secs=0;
+      if(x.amIn&&x.amOut) secs+=Math.max(0,secOf(x.amOut)-secOf(x.amIn));
+      if(x.pmIn&&x.pmOut) secs+=Math.max(0,secOf(x.pmOut)-secOf(x.pmIn));
+      ut=Math.max(0,REQUIRED_MIN-Math.round(secs/60));
+      total+=ut;
+    }
+    let label='';   // written across the AM/PM cells when there are no times: remarks, or SATURDAY/SUNDAY
+    if(!hasTime&&!nonexistent) label=x.remarks||(wd===6?'SATURDAY':wd===0?'SUNDAY':'');
+    return Object.assign({},x,{off,nonexistent,hasTime,ut,label});
+  });
+  return {rows,total};
+}
+
+function buildDtrWorkbook(ExcelJS, d){
+  const wb=new ExcelJS.Workbook();
+  wb.creator='E-DTR';
+  wb.calcProperties={fullCalcOnLoad:true};
+  drawDtrSheet(wb,d,'DTR');
+  return wb;
+}
+
+// The DTR is half of an A4 sheet (lengthwise). Two copies sit side by side on one A4 portrait page; cut in the middle.
+function drawDtrSheet(wb,d,title){
+  const calc=computeDtr(d), FIRST=12, LAST=42, TOTAL=43, FONT='Arial';
+  const COPIES=2, STRIDE=9, HELP0=18;   // copy 2 starts at column J; hidden helper columns are R and S
+  const ws=wb.addWorksheet(title,{views:[{showGridLines:false}]});
+  const thin={style:'thin',color:{argb:'FF000000'}};
+  const BOX={top:thin,left:thin,bottom:thin,right:thin};
+  const L=n=>String.fromCharCode(64+n);   // 1 -> A
+  [5,8,8,8,8,6,6].forEach((w,i)=>{ for(let k=0;k<COPIES;k++) ws.getColumn(1+k*STRIDE+i).width=w; });
+  ws.getColumn(8).width=1.5; ws.getColumn(9).width=1.5;
+  for(let k=0;k<COPIES;k++){ ws.getColumn(HELP0+k).width=14; ws.getColumn(HELP0+k).hidden=true; }
+  const rowH={1:12,2:6,3:24,4:6,5:18,6:11,7:16,8:12,9:12,10:14,11:22,43:18,44:6,45:12,46:12,47:12,48:12,49:12,50:20,51:12,52:12,53:12,54:20,55:12,56:6,57:10};
+  for(let r=1;r<=57;r++) ws.getRow(r).height=(r>=FIRST&&r<=LAST)?15:(rowH[r]||12);
+  for(let r=1;r<=57;r++) ws.getCell(r,9).border={left:{style:'dashed',color:{argb:'FF808080'}}};   // cutting guide
+
+  const drawCopy=k=>{
+    const c=i=>L(1+k*STRIDE+i);
+    const A=c(0),B=c(1),C=c(2),D=c(3),E=c(4),F=c(5),G=c(6),HP=L(HELP0+k);
+    const eachCell=(rng,fn)=>{
+      const m=/^([A-Z])(\d+):([A-Z])(\d+)$/.exec(rng);
+      for(let r=+m[2];r<=+m[4];r++) for(let q=m[1].charCodeAt(0)-64;q<=m[3].charCodeAt(0)-64;q++) fn(ws.getCell(r,q));
+    };
+    const put=(addr,val,font,align)=>{
+      const cell=ws.getCell(addr); cell.value=val;
+      cell.font=Object.assign({name:FONT,size:9},font||{});
+      if(align) cell.alignment=align;
+      return cell;
+    };
+    const CENTER={horizontal:'center',vertical:'middle',wrapText:true};
+    const underline=rng=>eachCell(rng,x=>{ x.border={bottom:thin}; });
+    const merge=rng=>ws.mergeCells(rng);
+
+    put(`${A}1`,'Civil Service Form No. 48',{size:7,bold:true});
+    merge(`${A}3:${G}3`); put(`${A}3`,'DAILY TIME RECORD',{size:14,bold:true},CENTER);
+    merge(`${A}5:${G}5`); put(`${A}5`,String(d.teacher.name||'').toUpperCase(),{size:11,bold:true},CENTER); underline(`${A}5:${G}5`);
+    merge(`${A}6:${G}6`); put(`${A}6`,'(Name)',{size:7,italic:true},CENTER);
+    merge(`${A}7:${B}7`); put(`${A}7`,'For the month of',{size:8});
+    merge(`${C}7:${G}7`);
+    const mc=put(`${C}7`,new Date(Date.UTC(d.year,d.month-1,1)),{size:10,bold:true},CENTER); mc.numFmt='mmmm yyyy'; underline(`${C}7:${G}7`);
+    merge(`${A}8:${D}8`); put(`${A}8`,'Official hours for arrival  (Regular days)',{size:7});
+    merge(`${E}8:${G}8`); underline(`${E}8:${G}8`);
+    merge(`${A}9:${D}9`); put(`${A}9`,'and departure  (Saturdays)',{size:7});
+    merge(`${E}9:${G}9`); put(`${E}9`,'-',{size:7},CENTER); underline(`${E}9:${G}9`);
+
+    merge(`${A}10:${A}11`); put(`${A}10`,'Day',{size:8,bold:true},CENTER);
+    merge(`${B}10:${C}10`); put(`${B}10`,'A.M.',{size:8,bold:true},CENTER);
+    merge(`${D}10:${E}10`); put(`${D}10`,'P.M.',{size:8,bold:true},CENTER);
+    merge(`${F}10:${G}10`); put(`${F}10`,'UNDER TIME',{size:8,bold:true},CENTER);
+    ['Arrival','Departure','Arrival','Departure','Hours','Minutes'].forEach((t,i)=>put(`${c(1+i)}11`,t,{size:8,bold:true},CENTER));
+    eachCell(`${A}10:${G}11`,x=>{ x.border=BOX; });
+
+    calc.rows.forEach((x,i)=>{
+      const r=FIRST+i;
+      [A,B,C,D,E,F,G].forEach(col=>{ const cell=ws.getCell(col+r); cell.font={name:FONT,size:9}; cell.border=BOX; cell.alignment=CENTER; });
+      ws.getCell(A+r).value=x.day;
+      if(x.hasTime){
+        [x.amIn,x.amOut,x.pmIn,x.pmOut].forEach((t,q)=>{
+          if(t){ const cell=ws.getCell(c(1+q)+r); cell.value=secOf(t)/86400; cell.numFmt='h:mm AM/PM'; }
+        });
+      } else if(x.label){
+        merge(`${B}${r}:${E}${r}`);
+        const cell=ws.getCell(B+r); cell.value=x.label; cell.font={name:FONT,size:x.remarks?8:9,italic:!!x.remarks}; cell.alignment=CENTER;
+        eachCell(`${B}${r}:${E}${r}`,q=>{ q.border=BOX; });
+      }
+      const day='$'+A+r, mon='$'+C+'$7', rg=(p,q)=>`$${p}${r}:$${q}${r}`;
+      const ic=ws.getCell(HP+r);
+      ic.value={formula:
+        `IF(OR(${day}>DAY(EOMONTH(${mon},0)),WEEKDAY(DATE(YEAR(${mon}),MONTH(${mon}),${day}),2)>5,COUNT(${rg(B,E)})=0),"",`+
+        `MAX(0,${REQUIRED_MIN}-ROUND(IF(COUNT(${rg(B,C)})=2,MAX(0,$${C}${r}-$${B}${r}),0)*1440+IF(COUNT(${rg(D,E)})=2,MAX(0,$${E}${r}-$${D}${r}),0)*1440,0)))`,
+        result:x.ut==null?'':x.ut};
+      ic.font={name:FONT,size:8,italic:true};
+      const fc=ws.getCell(F+r); fc.value={formula:`IF($${HP}${r}="","",INT($${HP}${r}/60))`,result:x.ut==null?'':Math.floor(x.ut/60)}; fc.numFmt='0';
+      const gc=ws.getCell(G+r); gc.value={formula:`IF($${HP}${r}="","",MOD($${HP}${r},60))`,result:x.ut==null?'':x.ut%60}; gc.numFmt='0';
+    });
+
+    merge(`${A}${TOTAL}:${E}${TOTAL}`);
+    put(`${A}${TOTAL}`,'TOTAL',{bold:true},CENTER);
+    const tf=put(`${F}${TOTAL}`,{formula:`INT(SUM($${HP}$${FIRST}:$${HP}$${LAST})/60)`,result:Math.floor(calc.total/60)},{bold:true},CENTER);
+    const tg=put(`${G}${TOTAL}`,{formula:`MOD(SUM($${HP}$${FIRST}:$${HP}$${LAST}),60)`,result:calc.total%60},{bold:true},CENTER);
+    tf.numFmt='0'; tg.numFmt='0';
+    eachCell(`${A}${TOTAL}:${G}${TOTAL}`,x=>{ x.border=BOX; });
+
+    merge(`${A}45:${G}47`);
+    put(`${A}45`,'I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival at and departure from office.',
+      {size:7,italic:true},{horizontal:'left',vertical:'top',wrapText:true});
+    merge(`${C}50:${G}50`); put(`${C}50`,String(d.teacher.name||'').toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}50:${G}50`);
+    merge(`${A}51:${G}51`); put(`${A}51`,'Verified as to the prescribed office hours.',{size:7,italic:true});
+    merge(`${C}54:${G}54`); put(`${C}54`,String(d.inCharge||'').toUpperCase(),{size:9,bold:true},{horizontal:'center',vertical:'bottom'}); underline(`${C}54:${G}54`);
+    merge(`${C}55:${G}55`); put(`${C}55`,'In Charge',{size:8,italic:true},CENTER);
+    put(`${A}57`,'(See Instructions on back)',{size:6,italic:true});
+  };
+  for(let k=0;k<COPIES;k++) drawCopy(k);
+
+  ws.pageSetup={paperSize:9,orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,
+    printArea:`A1:${L(1+(COPIES-1)*STRIDE+6)}57`,margins:{left:0.24,right:0.24,top:0.24,bottom:0.24,header:0.1,footer:0.1}};
+  return ws;
+}
+// DTR_BUILDER>>
+
+// <<VOICE_LOGIC  (no DOM here)
+const NAME_SUFFIX=/^(JR|SR|II|III|IV|V)\.?$/i;
+// "CANDIDO, ROGELIO JR. B." -> "Rogelio"; "REYES, MARIA CRISTINA L." -> "Maria Cristina"
+function firstName(full){
+  const raw=String(full||'').trim();
+  const part=raw.includes(',')?raw.split(',').slice(1).join(',').trim():raw;
+  const t=part.split(/\s+/).filter(Boolean);
+  while(t.length>1&&NAME_SUFFIX.test(t[t.length-1])) t.pop();
+  if(t.length>1&&/^[A-Za-z\u00D1\u00F1]\.?$/.test(t[t.length-1])) t.pop();
+  while(t.length>1&&NAME_SUFFIX.test(t[t.length-1])) t.pop();
+  const cap=w=>w.toLowerCase().replace(/(^|[-'])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+  return t.map(cap).join(' ');
+}
+// mode 'en' (default): all greetings in English.
+// mode 'fil': AM In / PM In / AM Out in Filipino, PM Out in English.
+function greeting(slot,name,hasCallName,mode){
+  const fil=mode==='fil', t=hasCallName?'':'teacher ';
+  switch(slot){
+    case 'AM_IN':  return fil?{lang:'fil',text:'Magandang umaga, '+t+name+'.'}:{lang:'en',text:'Good morning, '+t+name+'.'};
+    case 'PM_IN':  return fil?{lang:'fil',text:'Magandang hapon, '+name+'.'}:{lang:'en',text:'Good afternoon, '+name+'.'};
+    case 'AM_OUT': return fil?{lang:'fil',text:'Paalam at ingat ka, '+name+'.'}:{lang:'en',text:'Goodbye and take care, '+name+'.'};
+    case 'PM_OUT': return {lang:'en',text:'Goodbye and take care, '+name+'.'};
+  }
+  return {lang:'en',text:name+'.'};
+}
+// VOICE_LOGIC>>
+
+// <<GEO_LOGIC  (no DOM here)
+const STATUS_TYPES_UI=['TRAVEL ORDER','SICK LEAVE','VACATION LEAVE','SPECIAL LEAVE','OFFICIAL BUSINESS','OTHER'];
+// distance in meters between two GPS points (haversine); the server checks again
+function distM(lat1,lng1,lat2,lng2){
+  const R=6371000, rad=Math.PI/180, dLat=(lat2-lat1)*rad, dLng=(lng2-lng1)*rad;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));
+}
+// GEO_LOGIC>>
+
+/* ---------- state and helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store={
+  get(k){ try{ return sessionStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ sessionStorage.setItem(k,v); }catch(e){} },
+  del(k){ try{ sessionStorage.removeItem(k); }catch(e){} }
+};
+const state={
+  token:store.get('dtr_token')||'', user:JSON.parse(store.get('dtr_user')||'null'),
+  offset:0, tab:'home', today:null, dtr:null, dtrMonth:'', dtrEmp:'',
+  teachers:null, schools:null, todayAll:null, fix:{emp:'',date:'',rec:null}
+};
+
+/* ---------- Philippine time (Asia/Manila) from the server offset ---------- */
+const manilaFmt=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+function manilaParts(ms){ const o={}; manilaFmt.formatToParts(new Date(ms)).forEach(p=>{ o[p.type]=p.value; }); return {y:+o.year,m:+o.month,d:+o.day,h:+o.hour%24,mi:+o.minute,s:+o.second}; }
+const nowMs=()=>Date.now()+state.offset;
+function manilaTime(){ const p=manilaParts(nowMs()); return pad2(p.h)+':'+pad2(p.mi)+':'+pad2(p.s); }
+function manilaDate(){ const p=manilaParts(nowMs()); return p.y+'-'+pad2(p.m)+'-'+pad2(p.d); }
+function longDate(){ const p=manilaParts(nowMs()); const w=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow(p.y,p.m,p.d)]; return `${w}, ${MONTHS[p.m-1]} ${p.d}, ${p.y}`; }
+
+// same rule as nextSlot_ on the server; the server still decides
+function nextSlotLocal(rec){
+  if(!rec) return {slot:'AM_IN'};
+  const p=manilaParts(nowMs()), min=p.h*60+p.mi;
+  if(min<720){ if(!rec.AM_IN) return {slot:'AM_IN'}; if(!rec.AM_OUT) return {slot:'AM_OUT'}; return {slot:null}; }
+  if(rec.AM_IN&&!rec.AM_OUT&&!rec.PM_IN&&min<750) return {slot:'AM_OUT'};
+  if(!rec.PM_IN) return {slot:'PM_IN'};
+  if(!rec.PM_OUT) return {slot:'PM_OUT'};
+  return {slot:'PM_OUT',update:true};
+}
+
+/* ---------- API ---------- */
+const usingGas=()=>!!(window.google&&window.google.script&&window.google.script.run);
+async function api(action,payload={}){
+  const body=Object.assign({action,token:state.token},payload);
+  let data;
+  try{
+    if(usingGas()){
+      // the page is hosted by Apps Script itself: direct server call, no URL needed
+      data=await new Promise((res,rej)=>{
+        window.google.script.run.withSuccessHandler(r=>{ try{ res(JSON.parse(r)); }catch(e){ rej(e); } }).withFailureHandler(rej).apiCall(JSON.stringify(body));
+      });
+    }else{
+      if(API_URL.indexOf('PASTE_')===0) return {ok:false,error:'API_URL is not set. Put the Web app URL in index.html.'};
+      const res=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});
+      data=await res.json();
+    }
+  }catch(e){
+    return {ok:false,error:'Cannot reach the server. Check your internet connection and try again.'};
+  }
+  if(!data.ok&&data.code==='SESSION'){ localLogout(); toast('Your session expired. Please sign in again.','bad'); }
+  if(data.now&&data.now.ms) state.offset=data.now.ms-Date.now();
+  return data;
+}
+function toast(msg,kind){
+  const t=$('#toast'); t.textContent=msg; t.className=kind||''; clearTimeout(toast.h);
+  toast.h=setTimeout(()=>t.classList.add('hidden'),4200);
+}
+function localLogout(){ state.token=''; state.user=null; store.del('dtr_token'); store.del('dtr_user'); render(); }
+
+/* ---------- modal ---------- */
+function openSheet(html){
+  closeSheet();
+  const d=document.createElement('div'); d.className='scrim'; d.id='scrim';
+  d.innerHTML='<div class="sheet" role="dialog" aria-modal="true">'+html+'</div>';
+  d.addEventListener('click',e=>{ if(e.target===d) closeSheet(); });
+  document.body.appendChild(d);
+  const f=d.querySelector('input,select,button'); if(f) f.focus();
+  return d;
+}
+function closeSheet(){ const d=$('#scrim'); if(d) d.remove(); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
+
+/* ---------- render ---------- */
+function render(){
+  const app=$('#app');
+  if(!state.token||!state.user){ app.innerHTML=loginHtml(); bindLogin(); return; }
+  clearInterval(state.hb);
+  const u=state.user, admin=u.role==='Admin', kioskAcct=u.role==='Kiosk';
+  if(kioskAcct) state.tab='kiosk';
+  const tabs=kioskAcct?[]:[['home','Home'],['dtr','DTR'],['leave','Leave / Travel']].concat(admin?[['kiosk','Kiosk'],['sep'],['today','Today'],['teachers','Teachers'],['schools','Schools'],['fix','Fix times']]:[]);
+  app.innerHTML=`
+  <header class="top">
+    <span class="brand">E-DTR</span>
+    <div class="who"><b>${esc(u.name)}</b><span>${esc(u.school||(admin?'Admin':kioskAcct?'Kiosk':''))}</span></div>
+    <button class="iconbtn" id="menuBtn" aria-label="Account">Account</button>
+  </header>
+  ${tabs.length?`<nav class="tabs" role="tablist">${tabs.map(t=>t[0]==='sep'?'<span class="sep"></span>':`<button role="tab" data-tab="${t[0]}" aria-selected="${state.tab===t[0]}">${t[1]}</button>`).join('')}</nav>`:''}
+  <main id="view"></main>`;
+  $('#menuBtn').onclick=openAccount;
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ state.tab=b.dataset.tab; render(); });
+  ({home:viewHome,dtr:viewDtr,leave:viewLeave,kiosk:viewKiosk,today:viewToday,teachers:viewTeachers,schools:viewSchools,fix:viewFix}[state.tab]||viewHome)();
+}
+
+/* ---------- login ---------- */
+function loginHtml(){
+  const bad=!usingGas()&&API_URL.indexOf('PASTE_')===0;
+  return `<div class="login"><div class="card">
+    <h1>E-DTR</h1>
+    <p class="muted" style="margin:4px 0 18px">Attendance and Daily Time Record for school staff.</p>
+    ${bad?'<p class="err">The Web app URL is not set. Put it in <b>API_URL</b> inside index.html.</p>':''}
+    <p class="err hidden" id="lerr" role="alert"></p>
+    <form id="lf" autocomplete="on">
+      <div class="field"><label for="emp">Employee number</label><input id="emp" type="text" autocomplete="username" autocapitalize="characters" required></div>
+      <div class="field"><label for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required></div>
+      <button class="btn" style="width:100%" id="lbtn" type="submit">Sign in</button>
+    </form>
+    <p class="tznote" style="margin-top:14px">Every time in/out uses the server clock (Philippine Standard Time), not your device clock.</p>
+  </div></div>`;
+}
+function bindLogin(){
+  $('#lf').onsubmit=async e=>{
+    e.preventDefault();
+    const b=$('#lbtn'); b.disabled=true; b.textContent='Please wait...';
+    const r=await api('login',{empNo:$('#emp').value.trim(),pin:$('#pin').value.trim()});
+    b.disabled=false; b.textContent='Sign in';
+    if(!r.ok){ const el=$('#lerr'); el.textContent=r.error; el.classList.remove('hidden'); return; }
+    state.token=r.token; state.user=r.user; store.set('dtr_token',r.token); store.set('dtr_user',JSON.stringify(r.user));
+    state.tab='home'; state.today=null; state.dtr=null; render();
+  };
+}
+function openAccount(){
+  const s=openSheet(`<h2>Account</h2><p class="muted small">${esc(state.user.name)}<br>${esc(state.user.empNo)}</p>
+    <div class="acts" style="flex-direction:column"><button class="btn ghost" id="cp">Change PIN</button><button class="btn" id="lo">Sign out</button></div>`);
+  $('#cp',s).onclick=openChangePin;
+  $('#lo',s).onclick=async()=>{ closeSheet(); await api('logout'); localLogout(); };
+}
+function openChangePin(){
+  const s=openSheet(`<h2>Change PIN</h2><p class="err hidden" id="pe" role="alert"></p>
+    <div class="field"><label for="op">Current PIN</label><input id="op" type="password" inputmode="numeric"></div>
+    <div class="field"><label for="np">New PIN (4 to 8 digits)</label><input id="np" type="password" inputmode="numeric" maxlength="8"></div>
+    <div class="acts"><button class="btn ghost" id="x">Cancel</button><button class="btn" id="ok">Save PIN</button></div>`);
+  $('#x',s).onclick=closeSheet;
+  $('#ok',s).onclick=async()=>{
+    const r=await api('changePin',{oldPin:$('#op',s).value,newPin:$('#np',s).value});
+    if(!r.ok){ const e=$('#pe',s); e.textContent=r.error; e.classList.remove('hidden'); return; }
+    closeSheet(); toast('PIN changed.','good');
+  };
+}
+
+/* ---------- HOME ---------- */
+const slotCards=rec=>SLOT_KEYS.map(k=>`<div class="slot ${SLOT_INFO[k].kind}${rec&&rec[k]?' done':''}"><small>${SLOT_INFO[k].sub}</small><strong>${rec&&rec[k]?fmt12(rec[k]):'-'}</strong></div>`).join('');
+async function viewHome(){
+  const v=$('#view');
+  v.innerHTML='<div class="card hero"><div class="clock" id="clock"></div><div class="date" id="date"></div><div class="tznote">Philippine Standard Time</div><div id="homeBody"></div></div>';
+  tick();
+  if(!state.today){
+    $('#homeBody').innerHTML='<p class="muted" style="margin:24px 0">Loading the record for today...</p>';
+    await refreshToday();
+    if(!state.today&&$('#homeBody')){ $('#homeBody').innerHTML='<p class="muted" style="margin:24px 0">Could not load the record for today.</p><button class="btn ghost" id="retry">Try again</button>'; $('#retry').onclick=viewHome; return; }
+  }
+  drawHome();
+}
+async function refreshToday(){
+  const r=await api('today');
+  if(r.ok){ state.today={rec:r.rec,date:r.now.date}; state.kioskOnly=!!r.kioskOnly; state.geo={school:r.school||null,mode:r.locationMode||(r.requireLocation?'strict':'off'),maxAcc:r.maxAccuracy||150}; }
+  else if(state.token) toast(r.error,'bad');
+}
+function toggleSound(){ snd.on=!snd.on; saveSnd(); updateSoundBtn(); if(snd.on) chime('in'); else { const sy=synth(); if(sy) sy.cancel(); } }
+function drawHome(){
+  const body=$('#homeBody'); if(!body||state.tab!=='home'||!state.today) return;
+  const rec=state.today.rec;
+  if(state.kioskOnly){
+    body.innerHTML=`<div class="slots" id="slotsBox" style="margin-top:20px">${slotCards(rec)}</div>
+      <p class="note" style="margin:16px auto 0;max-width:420px;text-align:left">Time in and time out at the <b>office kiosk</b>. Your times for today appear here. Get your DTR from the DTR tab.</p>`;
+    return;
+  }
+  body.innerHTML=`<div id="locChip" class="chip hidden"></div>
+    <div class="duo phone">
+      <button class="orb in" id="pIn" type="button"><b>Time In</b><span>Arrival</span></button>
+      <button class="orb out" id="pOut" type="button"><b>Time Out</b><span>Departure</span></button>
+    </div>
+    <div id="kres" class="kres hidden" aria-live="polite"></div>
+    <div class="slots" id="slotsBox">${slotCards(rec)}</div>
+    <p style="margin:14px 0 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn ghost" id="ksnd" type="button"></button></p>`;
+  $('#pIn').onclick=()=>phonePunch('in');
+  $('#pOut').onclick=()=>phonePunch('out');
+  updateSoundBtn(); $('#ksnd').onclick=toggleSound;
+  checkChip();
+}
+
+/* ---------- location (GPS) ---------- */
+function getPos(){
+  return new Promise((res,rej)=>{
+    if(!navigator.geolocation) return rej({code:0});
+    navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  });
+}
+function locProblem(e){
+  if(e&&e.code===1) return 'Location access was blocked. Allow location for this site in your browser settings, then try again.';
+  if(e&&e.code===3) return 'Could not get your location in time. Move to an open area and try again.';
+  if(usingGas()) return 'Location is not available in this view. Open the app from the website link instead.';
+  return 'Could not get your location. Make sure location is turned on and try again.';
+}
+async function checkChip(){
+  const chip=$('#locChip'); if(!chip) return;
+  const g=state.geo||{}, sc=g.school, strict=g.mode==='strict';
+  const again=()=>{ const a=$('#locAgain'); if(a) a.onclick=e=>{ e.preventDefault(); checkChip(); }; };
+  const tail=strict?'':' You can still time in or out; the entry will be marked "not verified".';
+  if(!g.mode||g.mode==='off'){ chip.className='chip hidden'; return; }
+  if(!sc){
+    chip.className=strict?'chip warn':'chip';
+    chip.textContent=strict?'The location of your school has not been set yet. Please ask the admin to set it.':'Your school has no GPS area yet, so your location is not checked. You can still time in or out; the entry will be marked "not verified".';
+    return;
+  }
+  chip.className='chip'; chip.textContent='Checking your location...';
+  try{
+    const pos=await getPos(), d=distM(pos.coords.latitude,pos.coords.longitude,sc.lat,sc.lng), acc=Math.round(pos.coords.accuracy||0);
+    const c=$('#locChip'); if(!c) return;
+    if(acc>g.maxAcc){ c.className='chip warn'; c.innerHTML=`The GPS signal is weak (about ${acc} m).${esc(tail)} <a href="#" id="locAgain">Check again</a>`; }
+    else if(d<=sc.radius){ c.className='chip ok'; c.innerHTML=`You are inside ${esc(sc.name)} (about ${Math.round(d)} m from the center). <a href="#" id="locAgain">Check again</a>`; }
+    else { c.className='chip warn'; c.innerHTML=`You are about ${Math.round(d)} m from ${esc(sc.name)}. You must be within ${sc.radius} m to time in or out from a phone. <a href="#" id="locAgain">Check again</a>`; }
+    again();
+  }catch(e){
+    const c=$('#locChip'); if(!c) return;
+    c.className='chip warn'; c.innerHTML=`${esc(locProblem(e))}${esc(tail)} <a href="#" id="locAgain">Try again</a>`; again();
+  }
+}
+
+/* ---------- result card (kiosk and phone) ---------- */
+function miniSlots(rec){
+  return `<div class="mini">${SLOT_KEYS.map(k=>`<div>${SLOT_INFO[k].sub.replace(' ','<br>')}<b>${rec&&rec[k]?fmt12(rec[k]):'-'}</b></div>`).join('')}</div>`;
+}
+function showPunchResult(r,person){
+  const p=person||{};
+  if(!r.ok){
+    const warn=!!(r.warn||r.code==='DUPLICATE');
+    chime('bad');
+    if(r.say||warn) setTimeout(()=>speak(r.say||r.error,'en'),420);
+    showKiosk(warn?'warn':'bad',`<div class="g">${esc(r.error)}</div>${p.name?`<div class="d"><b>${esc(p.name)}</b></div>`:''}`);
+    return;
+  }
+  const nm=p.callName||firstName(p.name), g=greeting(r.slot,nm,!!p.callName,snd.greet);
+  chime(SLOT_INFO[r.slot].kind==='in'?'in':'out');
+  setTimeout(()=>speak(g.text,g.lang),420);
+  showKiosk('ok',`<div class="g">${esc(g.text)}</div><div class="d"><b>${esc(p.name||'')}</b><br>${SLOT_INFO[r.slot].sub}: <b>${fmt12(r.time)}</b>${r.updated?' (updated)':''}</div>${miniSlots(r.rec)}${r.notice?`<div class="note small" style="margin-top:10px">${esc(r.notice)}</div>`:''}${r.locationNote?`<div class="note small" style="margin-top:10px">${esc(r.locationNote)}</div>`:''}`);
+}
+
+/* ---------- phone punch ---------- */
+async function phonePunch(intent){
+  const bi=$('#pIn'), bo=$('#pOut'); if(!bi) return;
+  bi.disabled=bo.disabled=true;
+  try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC){ actx=actx||new AC(); if(actx.state==='suspended') actx.resume(); } }catch(e){}
+  let pos=null;
+  const mode=(state.geo&&state.geo.mode)||'off';
+  if(mode!=='off'){
+    try{ pos=await getPos(); }
+    catch(e){
+      if(mode==='strict'){ if($('#pIn')) bi.disabled=bo.disabled=false; chime('bad'); showKiosk('bad',`<div class="g">${esc(locProblem(e))}</div>`); return; }
+      // 'flag' mode: continue without a location; the server records it as "not verified"
+    }
+  }
+  const r=await api('punch',Object.assign({intent},pos?{lat:pos.coords.latitude,lng:pos.coords.longitude,acc:pos.coords.accuracy}:{}));
+  if(!$('#pIn')) return;
+  bi.disabled=bo.disabled=false;
+  if(r.ok&&state.today){ state.today.rec=r.rec; const sb=$('#slotsBox'); if(sb) sb.innerHTML=slotCards(r.rec); }
+  showPunchResult(r,state.user);
+  if(!r.ok&&(r.code==='OUTSIDE_SCHOOL'||r.code==='WEAK_GPS')) checkChip();
+}
+
+function tick(){
+  const c=$('#clock'); if(!c) return;
+  const t=manilaTime(), q=t.split(':').map(Number);
+  c.textContent=`${q[0]%12||12}:${pad2(q[1])}:${pad2(q[2])} ${q[0]>=12?'PM':'AM'}`;
+  $('#date').textContent=longDate();
+  const m=+t.slice(3,5);
+  const n=$('#cnow'); if(n) n.textContent=fmt12(t);
+}
+setInterval(tick,1000);
+
+/* ---------- DTR (monthly) ---------- */
+function monthOptions(){
+  const p=manilaParts(nowMs()), out=[]; let y=p.y, m=p.m;
+  for(let i=0;i<12;i++){ out.push([y+'-'+pad2(m),`${MONTHS[m-1]} ${y}`]); m--; if(m===0){ m=12; y--; } }
+  return out;
+}
+// The month counts as finished once its last working day (Monday to Friday) is reached. Used for the warning only.
+function monthDone(y,m){
+  let d=dim(y,m);
+  while(d>1&&(dow(y,m,d)===0||dow(y,m,d)===6)) d--;
+  const p=manilaParts(nowMs());
+  return p.y*10000+p.m*100+p.d >= y*10000+m*100+d;
+}
+function guardUnfinished(done,fn){
+  if(done){ fn(); return; }
+  const s=openSheet(`<h2>The month is not finished yet</h2>
+    <p>This DTR is incomplete and the undertime may change while new time in/outs are still being recorded. Continue with the download or print?</p>
+    <div class="acts"><button class="btn ghost" id="gx">Cancel</button><button class="btn" id="gy">Continue</button></div>`);
+  $('#gx',s).onclick=closeSheet;
+  $('#gy',s).onclick=()=>{ closeSheet(); fn(); };
+}
+async function viewDtr(){
+  const v=$('#view'), admin=state.user.role==='Admin';
+  if(!state.dtrMonth) state.dtrMonth=monthOptions()[0][0];
+  if(admin&&!state.teachers){ const r=await api('listTeachers'); if(r.ok) state.teachers=r.teachers; }
+  v.innerHTML=`<div class="card">
+    <div class="bar">
+      ${admin?`<div><label for="dt">Teacher</label><select id="dt"><option value="">Me (${esc(state.user.name)})</option>${(state.teachers||[]).filter(t=>t.active&&t.role!=='Kiosk'&&t.empNo!==state.user.empNo).map(t=>`<option value="${esc(t.empNo)}"${state.dtrEmp===t.empNo?' selected':''}>${esc(t.name)}</option>`).join('')}</select></div>`:''}
+      <div><label for="dm">Month</label><select id="dm">${monthOptions().map(o=>`<option value="${o[0]}"${state.dtrMonth===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select></div>
+      <div class="actions"><button class="btn" id="dx" disabled>Download Excel</button><button class="btn ghost" id="dp" disabled>Print</button></div>
+    </div>
+    <div id="dbody"><p class="muted">Loading DTR...</p></div></div>`;
+  $('#dm').onchange=e=>{ state.dtrMonth=e.target.value; loadDtr(); };
+  if(admin) $('#dt').onchange=e=>{ state.dtrEmp=e.target.value; loadDtr(); };
+  loadDtr();
+}
+async function loadDtr(){
+  const [y,m]=state.dtrMonth.split('-').map(Number), p={year:y,month:m};
+  if(state.dtrEmp) p.empNo=state.dtrEmp;
+  const body=$('#dbody'); if(body) body.innerHTML='<p class="muted">Loading DTR...</p>';
+  const r=await api('month',p);
+  if(!$('#dbody')) return;
+  if(!r.ok){ $('#dbody').innerHTML=`<p class="err">${esc(r.error)}</p>`; return; }
+  state.dtr=r;
+  const calc=computeDtr(r), done=monthDone(y,m);
+  const rows=calc.rows.map(x=>{
+    const cells=x.label
+      ? `<td colspan="4"${x.remarks?' class="rem"':''}>${esc(x.label)}</td>`
+      : [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
+    return `<tr><td>${x.day}</td>${cells}<td>${x.ut==null?'':Math.floor(x.ut/60)}</td><td>${x.ut==null?'':x.ut%60}</td></tr>`;
+  }).join('');
+  $('#dbody').innerHTML=`
+    <p style="margin:0 0 10px"><b>${esc(r.teacher.name)}</b> <span class="muted">| ${esc(r.teacher.school||'No school')}</span></p>
+    <div class="tw"><table class="t dtr"><thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">Under time</th></tr>
+      <tr><th>Arrival</th><th>Departure</th><th>Arrival</th><th>Departure</th><th>Hours</th><th>Minutes</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="5">TOTAL</td><td>${Math.floor(calc.total/60)}</td><td>${calc.total%60}</td></tr></tfoot></table></div>
+    <p class="small muted" style="margin:10px 0 0">In Charge: ${r.inCharge?esc(r.inCharge):'<i>not set for this school yet</i>'}</p>
+    ${done?'':`<p class="note" style="margin-top:10px">The month is not finished yet. You can download or print now, but the DTR is incomplete and the undertime may still change.</p>`}`;
+  const dx=$('#dx'), dp=$('#dp');
+  dx.disabled=dp.disabled=false;
+  dx.onclick=()=>guardUnfinished(done,downloadExcel); dp.onclick=()=>guardUnfinished(done,printDtr);
+}
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+async function ensureExcelJS(){
+  if(window.ExcelJS) return window.ExcelJS;
+  for(const src of EXCEL_LIBS){ try{ await loadScript(src); if(window.ExcelJS) return window.ExcelJS; }catch(e){} }
+  throw new Error('Could not load the Excel library. Check your internet connection and try again.');
+}
+async function downloadExcel(){
+  const d=state.dtr; if(!d) return;
+  const b=$('#dx'); b.disabled=true; b.textContent='Preparing...';
+  try{
+    const X=await ensureExcelJS();
+    const buf=await buildDtrWorkbook(X,d).xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download=`DTR_${d.teacher.empNo}_${d.year}-${pad2(d.month)}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast('DTR downloaded. Print it on A4 and sign.','good');
+  }catch(e){ toast(e.message,'bad'); }
+  b.disabled=false; b.textContent='Download Excel';
+}
+function formHtml(d){
+  const c=computeDtr(d);
+  const rows=c.rows.map(x=>{
+    const cells=x.label
+      ? `<td colspan="4"${x.remarks?' class="rem"':''}>${esc(x.label)}</td>`
+      : [x.amIn,x.amOut,x.pmIn,x.pmOut].map(t=>`<td>${fmt12(t)}</td>`).join('');
+    return `<tr><td>${x.day}</td>${cells}<td>${x.ut==null?'':Math.floor(x.ut/60)}</td><td>${x.ut==null?'':x.ut%60}</td></tr>`;
+  }).join('');
+  return `<div class="pf">
+    <div class="fn">Civil Service Form No. 48</div>
+    <h1>DAILY TIME RECORD</h1>
+    <div class="nm">${esc(String(d.teacher.name).toUpperCase())}</div><div class="cap">(Name)</div>
+    <div class="ln m">For the month of <i><b>${MONTHS[d.month-1]} ${d.year}</b></i></div>
+    <div class="ln">Official hours for arrival (Regular days) <i></i></div>
+    <div class="ln">and departure (Saturdays) <i>-</i></div>
+    <table><colgroup><col style="width:8mm"><col style="width:17mm"><col style="width:17mm"><col style="width:17mm"><col style="width:17mm"><col style="width:10mm"><col style="width:10mm"></colgroup>
+      <thead><tr><th rowspan="2">Day</th><th colspan="2">A.M.</th><th colspan="2">P.M.</th><th colspan="2">UNDER TIME</th></tr>
+      <tr><th>Arrival</th><th>Departure</th><th>Arrival</th><th>Departure</th><th>Hours</th><th>Minutes</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="5">TOTAL</td><td>${Math.floor(c.total/60)}</td><td>${c.total%60}</td></tr></tfoot></table>
+    <div class="cert">I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival at and departure from office.</div>
+    <div class="sg"><i>${esc(String(d.teacher.name).toUpperCase())}</i></div>
+    <div class="vf">Verified as to the prescribed office hours.</div>
+    <div class="ic"><b>${esc(String(d.inCharge||'').toUpperCase())}</b></div><div class="icc">In Charge</div>
+    <div class="see">(See Instructions on back)</div></div>`;
+}
+function printHtml(d){
+  const one=formHtml(d);
+  return `<div class="pw">${one}<div class="cut"></div>${one}</div>`;
+}
+function printDtr(){
+  if(!state.dtr) return;
+  $('#printSheet').innerHTML=printHtml(state.dtr);
+  window.print();
+}
+
+/* ---------- ADMIN: Today ---------- */
+async function viewToday(){
+  const v=$('#view'); v.innerHTML='<div class="card"><p class="muted">Loading list...</p></div>';
+  const r=await api('todayAll');
+  if(!$('#view')) return;
+  if(!r.ok){ v.innerHTML=`<div class="card"><p class="err">${esc(r.error)}</p></div>`; return; }
+  const done=r.list.filter(x=>x.AM_IN||x.PM_IN).length, away=r.list.filter(x=>!x.AM_IN&&!x.PM_IN&&x.remarks).length;
+  v.innerHTML=`<div class="card"><h2 style="font-size:20px;margin-bottom:4px">Attendance for ${esc(r.date)}</h2>
+    <p class="muted small" style="margin:0 0 10px">${done} of ${r.list.length} employees have timed in${away?`, ${away} on leave or travel`:''}.</p>
+    <div class="tw"><table class="t"><thead><tr><th>Teacher</th><th>School / Office</th><th>AM Arrival</th><th>AM Departure</th><th>PM Arrival</th><th>PM Departure</th><th>Status</th></tr></thead><tbody>
+    ${r.list.map(x=>{ const c=k=>(fmt12(x[k])||'-')+(x[k]&&x.via&&x.via[k]==='phone'?' <small class="muted">phone</small>':(x[k]&&x.via&&x.via[k]==='phone!'?' <small style="color:#C2410C;font-weight:700">phone, not verified</small>':'')); return `<tr><td>${esc(x.name)}</td><td>${esc(x.school)}</td><td>${c('AM_IN')}</td><td>${c('AM_OUT')}</td><td>${c('PM_IN')}</td><td>${c('PM_OUT')}</td><td>${esc(x.remarks||'')}</td></tr>`; }).join('')||'<tr><td colspan="7" class="muted">No employees yet.</td></tr>'}
+    </tbody></table></div></div>`;
+}
+
+/* ---------- ADMIN: Teachers ---------- */
+async function viewTeachers(){
+  const v=$('#view'); v.innerHTML='<div class="card"><p class="muted">Loading list...</p></div>';
+  const [a,b]=await Promise.all([api('listTeachers'),api('listSchools')]);
+  if(!$('#view')) return;
+  if(!a.ok){ v.innerHTML=`<div class="card"><p class="err">${esc(a.error)}</p></div>`; return; }
+  state.teachers=a.teachers; if(b.ok) state.schools=b.schools;
+  v.innerHTML=`<div class="card"><div class="bar"><div><h2 style="font-size:20px">Teachers (${a.teachers.length})</h2></div><div class="actions"><button class="btn" id="addT">Add</button></div></div>
+    <div class="tw"><table class="t"><thead><tr><th>Emp. No.</th><th>Name</th><th>School / Office</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>
+    ${a.teachers.map((t,i)=>`<tr><td>${esc(t.empNo)}</td><td>${esc(t.name)}</td><td>${esc(t.school)}</td><td>${t.role}</td><td><span class="pill${t.active?'':' off'}">${t.active?'Active':'Inactive'}</span></td><td><button class="btn ghost" data-i="${i}">Edit</button></td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  $('#addT').onclick=()=>teacherForm(null);
+  document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>teacherForm(state.teachers[+b.dataset.i]));
+}
+function teacherForm(t){
+  const isNew=!t, schools=(state.schools||[]).map(s=>`<option value="${esc(s.school)}">`).join('');
+  const s=openSheet(`<h2>${isNew?'New teacher':'Edit teacher'}</h2><p class="err hidden" id="te" role="alert"></p>
+    <div class="field"><label for="te1">Employee number</label><input id="te1" type="text" value="${esc(t?t.empNo:'')}" ${isNew?'':'readonly'}></div>
+    <div class="field"><label for="te2">Name (SURNAME, First Name M.I.)</label><input id="te2" type="text" value="${esc(t?t.name:'')}"></div>
+    <div class="field"><label for="te3">School / Office</label><input id="te3" type="text" list="sl" value="${esc(t?t.school:'')}"><datalist id="sl">${schools}</datalist></div>
+    <div class="row"><div class="field"><label for="te4">Role</label><select id="te4"><option${t&&t.role==='Teacher'||isNew?' selected':''}>Teacher</option><option${t&&t.role==='Admin'?' selected':''}>Admin</option><option${t&&t.role==='Kiosk'?' selected':''}>Kiosk</option></select></div>
+    <div class="field"><label for="te5">Status</label><select id="te5"><option value="1"${!t||t.active?' selected':''}>Active</option><option value="0"${t&&!t.active?' selected':''}>Inactive</option></select></div></div>
+    <div class="field"><label for="te7">Name to speak (optional, e.g. Sir Dyon)</label><input id="te7" type="text" maxlength="40" value="${esc(t?t.callName:'')}"><small class="muted">If blank, the first name is used in the greeting.</small></div>
+    <div class="field"><label for="te6">${isNew?'PIN (4 to 8 digits)':'New PIN (leave blank to keep the current one)'}</label><input id="te6" type="text" inputmode="numeric" maxlength="8" autocomplete="off"></div>
+    <div class="acts"><button class="btn ghost" id="x">Cancel</button><button class="btn" id="ok">Save</button></div>`);
+  $('#x',s).onclick=closeSheet;
+  $('#ok',s).onclick=async()=>{
+    const r=await api('saveTeacher',{empNo:$('#te1',s).value,name:$('#te2',s).value,school:$('#te3',s).value,role:$('#te4',s).value,active:$('#te5',s).value==='1',pin:$('#te6',s).value,callName:$('#te7',s).value});
+    if(!r.ok){ const e=$('#te',s); e.textContent=r.error; e.classList.remove('hidden'); return; }
+    closeSheet(); toast('Employee saved.','good'); state.teachers=null; viewTeachers();
+  };
+}
+
+/* ---------- ADMIN: Schools / In Charge ---------- */
+async function viewSchools(){
+  const v=$('#view'); v.innerHTML='<div class="card"><p class="muted">Loading list...</p></div>';
+  const r=await api('listSchools');
+  if(!$('#view')) return;
+  if(!r.ok){ v.innerHTML=`<div class="card"><p class="err">${esc(r.error)}</p></div>`; return; }
+  state.schools=r.schools;
+  const row=(s,i)=>`<div style="padding:14px 0;border-top:1px solid var(--line)">
+      <div class="bar"><div><label>School / Office</label><input type="text" value="${esc(s.school)}" readonly></div><div><label for="ic${i}">In Charge (school head)</label><input id="ic${i}" type="text" value="${esc(s.inCharge)}"></div></div>
+      <div class="bar"><div><label for="la${i}">Latitude</label><input id="la${i}" type="text" inputmode="decimal" value="${esc(s.lat)}" placeholder="e.g. 12.5778"></div>
+        <div><label for="lo${i}">Longitude</label><input id="lo${i}" type="text" inputmode="decimal" value="${esc(s.lng)}" placeholder="e.g. 122.2691"></div>
+        <div><label for="ra${i}">Radius (meters)</label><input id="ra${i}" type="text" inputmode="numeric" value="${esc(s.radius)}" placeholder="150"></div>
+        <div class="actions"><button class="btn ghost" data-g="${i}" type="button">Use my location</button><button class="btn" data-s="${i}" type="button">Save</button></div></div></div>`;
+  v.innerHTML=`<div class="card"><h2 style="font-size:20px;margin-bottom:4px">Schools / Offices, In Charge and GPS area</h2>
+    <p class="muted small" style="margin:0 0 6px">The name under "In Charge" on the DTR is taken from here, based on the employee's school. Use the format SURNAME, First Name M.I.</p>
+    <p class="muted small" style="margin:0 0 6px"><b>GPS area:</b> employees can time in or out from a phone only when they are inside this circle. Stand inside the school or office (ideally in the middle), press <b>Use my location</b>, then <b>Save</b>. Location only works on the website link, not inside the Apps Script page.</p>
+    <p class="muted small" style="margin:0 0 6px"><b>Not there?</b> Open Google Maps, press and hold (phone) or right-click (computer) on the building, copy the two numbers shown (for example <i>12.5778, 122.2691</i>) and paste them into the <b>Latitude</b> box. They are split automatically. Then press <b>Save</b>.</p>
+    <p class="muted small" style="margin:0 0 6px">Leave the fields empty to turn phone time in/out off for that place's employees (the kiosk still works).</p>
+    ${r.schools.map(row).join('')||'<p class="muted">No schools yet. Add an employee with a school first, or add one below.</p>'}
+    <div style="padding-top:14px;border-top:1px solid var(--line)"><div class="bar"><div><label for="ns">New school / office</label><input id="ns" type="text"></div><div><label for="nh">In Charge</label><input id="nh" type="text"></div><div class="actions"><button class="btn ghost" id="addS" type="button">Add</button></div></div></div></div>`;
+  r.schools.forEach((_,i)=>{
+    const la=$('#la'+i); if(!la) return;
+    const split=()=>{ const m=/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/.exec(la.value); if(m){ la.value=m[1]; $('#lo'+i).value=m[2]; if(!$('#ra'+i).value) $('#ra'+i).value='150'; } };
+    la.addEventListener('input',split); la.addEventListener('change',split);
+  });
+  document.querySelectorAll('[data-g]').forEach(b=>b.onclick=async()=>{
+    const i=+b.dataset.g; b.disabled=true; b.textContent='Locating...';
+    try{ const pos=await getPos(); $('#la'+i).value=pos.coords.latitude.toFixed(6); $('#lo'+i).value=pos.coords.longitude.toFixed(6); if(!$('#ra'+i).value) $('#ra'+i).value='150'; toast(`Location filled in (accuracy about ${Math.round(pos.coords.accuracy||0)} m). Press Save.`,'good'); }
+    catch(e){ toast(locProblem(e),'bad'); }
+    b.disabled=false; b.textContent='Use my location';
+  });
+  document.querySelectorAll('[data-s]').forEach(b=>b.onclick=async()=>{
+    const i=+b.dataset.s, res=await api('saveSchool',{school:state.schools[i].school,inCharge:$('#ic'+i).value,lat:$('#la'+i).value,lng:$('#lo'+i).value,radius:$('#ra'+i).value});
+    toast(res.ok?'Saved.':res.error,res.ok?'good':'bad');
+  });
+  $('#addS').onclick=async()=>{
+    const res=await api('saveSchool',{school:$('#ns').value,inCharge:$('#nh').value});
+    if(res.ok){ toast('Saved.','good'); viewSchools(); } else toast(res.error,'bad');
+  };
+}
+
+/* ---------- LEAVE / TRAVEL (filed by the employee) ---------- */
+async function viewLeave(){
+  const v=$('#view'); v.innerHTML='<div class="card"><p class="muted">Loading...</p></div>';
+  const r=await api('myStatus');
+  if(!$('#view')) return;
+  if(!r.ok){ v.innerHTML=`<div class="card"><p class="err">${esc(r.error)}</p></div>`; return; }
+  const today=manilaDate(), mn=r.min, mx=r.max;
+  v.innerHTML=`<div class="card"><h2 style="font-size:20px;margin-bottom:4px">Leave / Travel</h2>
+    <p class="muted small" style="margin:0 0 12px">Use this when you will not time in at school (for example sick leave or an official trip). Your DTR will show the label instead of times. Weekends are skipped, and days that already have times are not changed.</p>
+    <p class="err hidden" id="lverr" role="alert"></p>
+    <div class="row"><div class="field"><label for="lvType">Type</label><select id="lvType">${STATUS_TYPES_UI.map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="field"><label for="lvNote">Note (optional: place or purpose, no number needed)</label><input id="lvNote" type="text" maxlength="24" placeholder="e.g. Training, Odiongan"></div></div>
+    <div class="row"><div class="field"><label for="lvFrom">From</label><input id="lvFrom" type="date" min="${mn}" max="${mx}" value="${today}"></div>
+      <div class="field"><label for="lvTo">To (optional)</label><input id="lvTo" type="date" min="${mn}" max="${mx}"></div></div>
+    <p class="muted small" style="margin:0 0 10px">You can file from ${esc(mn)} up to ${esc(mx)}. For other dates, ask the admin.</p>
+    <button class="btn" id="lvSave" type="button">File it</button></div>
+    <div class="card"><h2 style="font-size:18px;margin-bottom:8px">My entries</h2>
+    ${r.entries.length?`<div class="tw"><table class="t"><thead><tr><th>Date</th><th>Status</th><th></th></tr></thead><tbody>${r.entries.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(e.label)}</td><td>${e.editable?`<button class="btn ghost" data-c="${esc(e.date)}" type="button">Cancel</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">Nothing filed yet.</p>'}</div>`;
+  $('#lvSave').onclick=async()=>{
+    const b=$('#lvSave'), e=$('#lverr'); e.classList.add('hidden'); b.disabled=true;
+    const res=await api('setStatus',{type:$('#lvType').value,note:$('#lvNote').value,from:$('#lvFrom').value,to:$('#lvTo').value||$('#lvFrom').value});
+    b.disabled=false;
+    if(!res.ok){ e.textContent=res.error; e.classList.remove('hidden'); return; }
+    const sk=(res.skipped||[]).map(x=>`${x.date} (${x.reason})`).join(', ');
+    toast(res.set.length?`Filed ${res.label} for ${res.set.length} day(s).${sk?' Skipped: '+sk:''}`:`Nothing was filed. ${sk||'Only weekends were selected.'}`,res.set.length?'good':'bad');
+    viewLeave();
+  };
+  document.querySelectorAll('[data-c]').forEach(b=>b.onclick=async()=>{
+    const res=await api('clearStatus',{date:b.dataset.c});
+    toast(res.ok?'Cancelled.':res.error,res.ok?'good':'bad'); if(res.ok) viewLeave();
+  });
+}
+
+/* ---------- ADMIN: Fix times ---------- */
+async function viewFix(){
+  const v=$('#view');
+  if(!state.teachers){ const r=await api('listTeachers'); if(r.ok) state.teachers=r.teachers; }
+  if(!state.fix.date) state.fix.date=manilaDate();
+  v.innerHTML=`<div class="card"><h2 style="font-size:20px;margin-bottom:4px">Fix an employee's times</h2>
+    <p class="muted small" style="margin:0 0 12px">For forgotten time outs, leave or holidays. Every change is logged in the Audit sheet. Times here use the 24-hour clock (e.g. 17:05 = 5:05 PM).</p>
+    <div class="bar"><div><label for="fe">Teacher</label><select id="fe"><option value="">Select...</option>${(state.teachers||[]).filter(t=>t.active&&t.role!=='Kiosk').map(t=>`<option value="${esc(t.empNo)}"${state.fix.emp===t.empNo?' selected':''}>${esc(t.name)}</option>`).join('')}</select></div>
+      <div><label for="fd">Date</label><input id="fd" type="date" value="${esc(state.fix.date)}"></div>
+      <div class="actions"><button class="btn ghost" id="fl">Load</button></div></div>
+    <div id="fbody"></div></div>`;
+  const load=async()=>{
+    state.fix.emp=$('#fe').value; state.fix.date=$('#fd').value;
+    if(!state.fix.emp||!state.fix.date){ toast('Select an employee and a date.','bad'); return; }
+    const r=await api('day',{empNo:state.fix.emp,date:state.fix.date});
+    if(!r.ok){ toast(r.error,'bad'); return; }
+    const x=r.rec, t=k=>esc(x[k]?x[k].slice(0,8):'');
+    $('#fbody').innerHTML=`<div class="row">${SLOT_KEYS.map(k=>`<div class="field"><label for="f_${k}">${SLOT_INFO[k].sub}</label><input id="f_${k}" type="time" step="1" value="${t(k)}"></div>`).join('')}</div>
+      <div class="field"><label for="f_rem">Remarks (e.g. LEAVE, HOLIDAY, TRAVEL ORDER)</label><input id="f_rem" type="text" maxlength="60" value="${esc(x.remarks)}"></div>
+      <button class="btn" id="fs">Save changes</button>`;
+    $('#fs').onclick=async()=>{
+      const res=await api('editDay',{empNo:state.fix.emp,date:state.fix.date,amIn:$('#f_AM_IN').value,amOut:$('#f_AM_OUT').value,pmIn:$('#f_PM_IN').value,pmOut:$('#f_PM_OUT').value,remarks:$('#f_rem').value});
+      toast(res.ok?'Changes saved.':res.error,res.ok?'good':'bad');
+    };
+  };
+  $('#fl').onclick=load;
+  if(state.fix.emp) load();
+}
+
+/* ---------- SOUND: chime and voice ---------- */
+const snd={on:true,vol:1,fil:'',en:'',greet:'en'};
+try{ Object.assign(snd,JSON.parse(localStorage.getItem('dtr_sound')||'{}')); }catch(e){}
+const saveSnd=()=>{ try{ localStorage.setItem('dtr_sound',JSON.stringify(snd)); }catch(e){} };
+const synth=()=>('speechSynthesis' in window)?window.speechSynthesis:null;
+const allVoices=()=>{ const s=synth(); return s?(s.getVoices()||[]):[]; };
+function pickVoice(lang){
+  const vs=allVoices(), saved=snd[lang];
+  if(saved){ const v=vs.find(x=>x.voiceURI===saved||x.name===saved); if(v) return v; }
+  const rank=v=>/natural|online/i.test(v.name)?0:1;
+  const by=re=>vs.filter(v=>re.test(v.lang)).sort((a,b)=>rank(a)-rank(b))[0]||null;
+  if(lang==='fil') return by(/^(fil|tl)([-_]|$)/i);
+  return by(/^en[-_]PH/i)||by(/^en[-_]US/i)||by(/^en/i);
+}
+function speak(text,lang){
+  const s=synth();
+  if(!snd.on||!s||!window.SpeechSynthesisUtterance) return;
+  try{
+    s.cancel();
+    const u=new window.SpeechSynthesisUtterance(text), v=pickVoice(lang);
+    if(v){ u.voice=v; u.lang=v.lang; } else u.lang=lang==='fil'?'fil-PH':'en-PH';
+    u.volume=snd.vol; u.rate=0.95;
+    s.speak(u);
+  }catch(e){}
+}
+let actx=null;
+function chime(kind){   // 'in' rising, 'out' falling, 'bad' low
+  if(!snd.on) return;
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    actx=actx||new AC(); if(actx.state==='suspended') actx.resume();
+    const seq=kind==='in'?[659,880]:kind==='out'?[880,659]:[196,196], t0=actx.currentTime;
+    seq.forEach((f,i)=>{
+      const o=actx.createOscillator(), g=actx.createGain(), a=t0+i*0.18;
+      o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0.0001,a); g.gain.exponentialRampToValueAtTime(0.25*snd.vol+0.0001,a+0.02); g.gain.exponentialRampToValueAtTime(0.0001,a+0.17);
+      o.start(a); o.stop(a+0.18);
+    });
+  }catch(e){}
+}
+function openSound(){
+  const vs=allVoices(), fil=vs.filter(v=>/^(fil|tl)([-_]|$)/i.test(v.lang)), en=vs.filter(v=>/^en/i.test(v.lang));
+  const opts=(list,sel)=>'<option value="">Auto</option>'+list.map(v=>`<option value="${esc(v.voiceURI||v.name)}"${(sel===v.voiceURI||sel===v.name)?' selected':''}>${esc(v.name)}</option>`).join('');
+  const s=openSheet(`<h2>Sound</h2>
+    <div class="field"><label><input type="checkbox" id="sn" ${snd.on?'checked':''} style="width:auto;min-height:0;margin-right:8px">Sound and voice greeting on</label></div>
+    <div class="field"><label for="sv">Volume</label><input id="sv" type="range" min="0.1" max="1" step="0.1" value="${snd.vol}" style="min-height:0"></div>
+    <div class="field"><label for="sg">Greeting language</label><select id="sg"><option value="en"${snd.greet!=='fil'?' selected':''}>English (default)</option><option value="fil"${snd.greet==='fil'?' selected':''}>Filipino</option></select></div>
+    <div class="field"><label for="se">English voice</label><select id="se">${opts(en,snd.en)}</select></div>
+    <div class="field"><label for="sf">Filipino voice</label><select id="sf">${opts(fil,snd.fil)}</select></div>
+    <p class="note small">${fil.length?'A Filipino voice is available on this device.':'No Filipino voice was found on this device, so Filipino greetings would use an English voice. For a natural Filipino voice, use <b>Microsoft Edge</b> on the kiosk computer.'}</p>
+    <div class="acts"><button class="btn ghost" id="t1">Test English</button><button class="btn ghost" id="t2">Test Filipino</button></div>
+    <div class="acts"><button class="btn" id="sx">Done</button></div>`);
+  const apply=()=>{ snd.on=$('#sn',s).checked; snd.vol=+$('#sv',s).value; snd.greet=$('#sg',s).value; snd.en=$('#se',s).value; snd.fil=$('#sf',s).value; saveSnd(); updateSoundBtn(); };
+  ['#sn','#sv','#sg','#se','#sf'].forEach(q=>$(q,s).addEventListener('change',apply));
+  $('#t1',s).onclick=()=>{ apply(); chime('in'); setTimeout(()=>speak('Good morning, teacher Rogelio.','en'),420); };
+  $('#t2',s).onclick=()=>{ apply(); chime('out'); setTimeout(()=>speak('Magandang umaga, teacher Rogelio.','fil'),420); };
+  $('#sx',s).onclick=closeSheet;
+}
+function updateSoundBtn(){ const b=$('#ksnd'); if(b) b.textContent=snd.on?'Sound: On':'Sound: Off'; }
+
+/* ---------- KIOSK: time in/out at the office ---------- */
+function showKiosk(kind,html){   // kind: 'ok' | 'warn' | 'bad'
+  const k=$('#kres'); if(!k) return;
+  k.className='kres '+kind; k.innerHTML=html;
+  clearTimeout(state.kt); state.kt=setTimeout(()=>{ const q=$('#kres'); if(q) q.className='kres hidden'; },8000);
+}
+let KIOSK_IDLE_MS=30000;   // the form closes itself when nobody touches it
+function viewKiosk(){
+  const v=$('#view');
+  v.innerHTML=`<div class="card kiosk hero">
+    <div class="clock" id="clock"></div><div class="date" id="date"></div><div class="tznote">Philippine Standard Time</div>
+    <div class="duo">
+      <button class="orb in" id="kin" type="button"><b>Time In</b><span>Arrival</span></button>
+      <button class="orb out" id="kout" type="button"><b>Time Out</b><span>Departure</span></button>
+    </div>
+    <div id="kres" class="kres hidden" aria-live="polite"></div>
+    <p style="margin:6px 0 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn ghost" id="ksnd" type="button"></button><button class="btn ghost" id="ks" type="button">Voice settings</button></p></div>`;
+  tick();
+  $('#kin').onclick=()=>openKioskForm('in');
+  $('#kout').onclick=()=>openKioskForm('out');
+  $('#ks').onclick=openSound;
+  updateSoundBtn();
+  $('#ksnd').onclick=toggleSound;
+  // keep the kiosk signed in while the page is open
+  state.hb=setInterval(()=>{ if(state.token) api('ping'); },10*60*1000);
+}
+function openKioskForm(intent){
+  try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC){ actx=actx||new AC(); if(actx.state==='suspended') actx.resume(); } }catch(e){}   // allow sound (needs a click)
+  const label=intent==='in'?'Time In':'Time Out', color=intent==='in'?'var(--brand)':'var(--out-d)';
+  const s=openSheet(`<h2 style="color:${color}">${label}</h2>
+    <p class="err hidden" id="kerr" role="alert"></p>
+    <form id="kf" autocomplete="off">
+      <div class="field"><label for="ke">Employee number</label><input id="ke" type="text" autocomplete="off" autocapitalize="characters"></div>
+      <div class="field"><label for="kp">PIN</label><input id="kp" type="password" inputmode="numeric" autocomplete="off"></div>
+      <div class="acts"><button class="btn ghost" id="kx" type="button">Cancel</button><button class="btn" id="kok" type="submit">Record ${label}</button></div>
+    </form>`);
+  let idle; const bump=()=>{ clearTimeout(idle); idle=setTimeout(()=>{ if($('#kf')) closeSheet(); },KIOSK_IDLE_MS); };
+  s.addEventListener('input',bump); bump();
+  $('#kx',s).onclick=()=>{ clearTimeout(idle); closeSheet(); };
+  $('#ke',s).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $('#kp',s).focus(); } });
+  const fail=msg=>{ chime('bad'); const e=$('#kerr',s); e.textContent=msg; e.classList.remove('hidden'); $('#kp',s).value=''; $('#kp',s).focus(); };
+  $('#kf',s).onsubmit=async e=>{
+    e.preventDefault();
+    const emp=$('#ke',s).value.trim(), pin=$('#kp',s).value.trim(), b=$('#kok',s);
+    if(!emp||!pin){ fail('Enter the employee number and PIN.'); return; }
+    b.disabled=true;
+    const r=await api('kioskPunch',{empNo:emp,pin,intent});
+    if(!$('#kf')) return;
+    b.disabled=false;
+    if(!r.ok&&!r.person){ fail(r.error); return; }          // wrong PIN, locked, etc.: stay in the form
+    clearTimeout(idle); closeSheet();
+    showPunchResult(r,r.person);                              // success, or a warning such as "already timed in"
+  };
+}
+
+/* ---------- start ---------- */
+(async function init(){
+  render();
+  const t0=Date.now(), r=await api('time');
+  if(r.ok&&r.now) state.offset=r.now.ms+(Date.now()-t0)/2-Date.now();
+  if(state.token&&state.user) tick();
+})();
+</script>
+</body>
+</html>
